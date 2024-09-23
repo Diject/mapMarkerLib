@@ -60,6 +60,12 @@ this.hasFloatMarkers = false
 ---@field color number[]|nil {r, g, b} [0, 1]
 ---@field isTemporary boolean|nil
 
+local function getId()
+    local id = string.format("%.0f", storageData.id)
+    storageData.id = storageData.id + 1
+    return id
+end
+
 function this.init()
     local player = tes3.player
     if not player.data[storageName] then
@@ -131,8 +137,7 @@ function this.addLocal(params, temp)
         this.localMap[cellName] = {}
     end
 
-    local id = tostring(storageData.id)
-    storageData.id = storageData.id + 1
+    local id = getId()
 
     this.localMap[cellName][id] = {
         x = params.x,
@@ -173,8 +178,7 @@ end
 function this.addWorld(params)
     if not this.world then return end
 
-    local id = tostring(storageData.id)
-    storageData.id = storageData.id + 1
+    local id = getId()
 
     this.world[id] = {
         x = params.x,
@@ -222,8 +226,7 @@ function this.addRecord(id, params)
     record.scale = params.scale
 
     if not id then
-        id = tostring(storageData.id)
-        storageData.id = storageData.id + 1
+        id = getId()
     elseif not this.records[id] then
         return
     end
@@ -758,8 +761,7 @@ end
 
 ---@param params markerLib.addFloatingLocal.params
 function this.addFloatingLocal(params)
-    local id = tostring(storageData.id)
-    storageData.id = storageData.id + 1
+    local id = getId()
 
     this.floatingMarkers[params.ref] = {
         id = params.id,
