@@ -46,6 +46,7 @@ this.hasMovingMarkers = false
 ---@field y number|nil
 ---@field z number|nil
 ---@field trackedRef mwseSafeObjectHandle|nil
+---@field conditionFunc fun(data: markerLib.movingMarker|markerLib.markerData)|nil
 ---@field marker tes3uiElement|nil
 
 ---@class markerLib.markerData
@@ -53,8 +54,10 @@ this.hasMovingMarkers = false
 ---@field x number|nil
 ---@field y number|nil
 ---@field z number|nil
+---@field markerId string
 ---@field cellName string|nil should be nil if the cell is exterior
----@field objectId string|nil should be lower
+---@field objectId string|nil should be lowercase
+---@field conditionFunc fun(data: markerLib.movingMarker|markerLib.markerData)|nil
 ---@field temporary boolean|nil
 ---@field trackedRef mwseSafeObjectHandle|nil
 
@@ -126,13 +129,14 @@ end
 ---@field y number|nil
 ---@field z number|nil
 ---@field cellName string|nil should be nil if the cell is exterior
----@field objectId string|nil should be lower
+---@field objectId string|nil should be lowercase
+---@field conditionFunc fun(data: markerLib.movingMarker|markerLib.markerData)|nil
 ---@field temporary boolean|nil
 ---@field trackedRef tes3reference|nil
 
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
-function this.addLocal(params, temp)
+function this.addLocal(params)
     if not this.localMap then return end
 
     local cellName
@@ -154,10 +158,11 @@ function this.addLocal(params, temp)
         y = params.y,
         z = params.z,
         id = params.id,
+        markerId = id,
         objectId = params.objectId,
         temporary = params.temporary,
         trackedRef = params.trackedRef and tes3.makeSafeObjectHandle(params.trackedRef),
-        temp = temp
+        conditionFunc = params.conditionFunc
     }
 
     log("added marker \"", id, "\" to \"", cellName, "\" cell", this.localMap[cellName][id])
@@ -359,6 +364,37 @@ local function addInfoToMarker(markerElement, recordToAdd)
     end
 end
 
+---@param data markerLib.markerData|markerLib.movingMarker
+---@param destroyMarker boolean|nil
+---@return boolean|nil
+local function checkConditionsToRemoveForMarkerData(data, destroyMarker)
+    local markerRecord = this.records[data.id]
+    if not markerRecord then
+        if data.marker and destroyMarker then
+            data.marker:destroy()
+        end
+        return true
+    end
+
+    if not data.trackedRef:valid() then
+        if data.marker and destroyMarker then
+            data.marker:destroy()
+        end
+        return true
+    end
+
+    if data.conditionFunc then
+        if not data.conditionFunc(data) then
+            if data.marker and destroyMarker then
+                data.marker:destroy()
+            end
+            return true
+        end
+    end
+
+    return false
+end
+
 local lastLocalMarkerPosX = 99999999
 local lastLocalMarkerPosY = 99999999
 local lastPosX = 99999999
@@ -557,19 +593,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
                 goto continue
             end
 
-            local markerRecord = this.records[data.id]
-            if not markerRecord then
-                if data.marker then
-                    data.marker:destroy()
-                end
-                this.movingMarkers[refId] = nil
-                goto continue
-            end
-
-            if not data.trackedRef:valid() then
-                if data.marker then
-                    data.marker:destroy()
-                end
+            if checkConditionsToRemoveForMarkerData(data, true) then
                 this.movingMarkers[refId] = nil
                 goto continue
             end
@@ -578,6 +602,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
             data.x = position.x
             data.y = position.y
             data.z = position.z
+            local markerRecord = this.records[data.id]
             placeMarkerFunc(markerRecord, data.markerId, data, false)
 
             ::continue::
