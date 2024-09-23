@@ -373,6 +373,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
 
     this.lastLocalUpdate = os.clock()
 
+    local removeOldMarkers = false
     local shouldUpdate = forceRedraw and true or false
     if math.abs(playerMarker.positionX - lastLocalMarkerPosX) > 500 or math.abs(playerMarker.positionY - lastLocalMarkerPosY) > 500 then
         shouldUpdate = true
@@ -381,6 +382,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
     lastLocalMarkerPosY = playerMarker.positionY
 
     if lastCellInteriorFlag ~= playerCell.isInterior then
+        removeOldMarkers = true
         axisAngle = 0
         if playerCell.isInterior then
             for ref in playerCell:iterateReferences(tes3.objectType.static) do
@@ -425,6 +427,10 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
 
     local offsetX = 1 - playerMarkerTileX
     local offsetY = 1 - playerMarkerTileY
+
+    if removeOldMarkers then
+        this.removeFloatMarkersBindings()
+    end
 
     local function updateDunamicMarkers()
         for ref, data in pairs(this.floatingMarkers) do
@@ -479,12 +485,13 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
 
     local markerMap = {}
 
-    if not playerCell.isInterior then
-
-        ---@type table<integer, tes3uiElement>
-        local childrens = {}
-        for _, child in pairs(localPane.children) do
-            if child.name == markerLabelId then
+    ---@type table<integer, tes3uiElement>
+    local childrens = {}
+    for _, child in pairs(localPane.children) do
+        if child.name == markerLabelId then
+            if removeOldMarkers then
+                child:destroy()
+            else
                 local ids = child:getLuaData("ids")
                 if ids then
                     for _, id in pairs(ids) do
@@ -495,7 +502,9 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
                 end
             end
         end
+    end
 
+    if not playerCell.isInterior then
         local sX = -2
         local eX = 2
         local sY = -2
@@ -592,21 +601,6 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
         end
 
     else -- for interior cells
-
-        ---@type table<integer, tes3uiElement>
-        local childrens = {}
-        for _, child in pairs(localPane.children) do
-            if child.name == markerLabelId then
-                local ids = child:getLuaData("ids")
-                if ids then
-                    for _, id in pairs(ids) do
-                        childrens[id] = child
-                    end
-                else
-                    child:destroy()
-                end
-            end
-        end
 
         local cellData = this.getCellData(playerCell.editorName)
         local allowedError = 8
@@ -807,6 +801,83 @@ function this.clearCache()
     this.cachedCells = {}
 end
 
+function this.removeFloatMarkersBindings()
+    for _, data in pairs(this.floatingMarkers) do
+        data.marker = nil ---@diagnostic disable-line: inject-field
+    end
+end
+
+---@param ref tes3reference
+function this.checkRefForMarker(ref)
+    if not ref then return end
+    if not ref or ref.disabled or ref.object.objectType == tes3.objectType.static or not ref.cell then return end
+
+    if not this.isReady() then
+        this.init()
+    end
+
+    local cellName = ref.cell.editorName:lower()
+
+    this.cacheDataOfTrackingObjects()
+    this.cacheDataOfTrackingObjects(cellName)
+
+    local function addMarker(objData)
+        if not objData then return end
+        for markerId, data in pairs(objData) do
+            this.addFloatingLocal{ id = data.id, ref = ref }
+        end
+    end
+
+    local objData = this.cachedFloatMarkerData[ref.baseObject.id:lower()]
+    addMarker(objData)
+    objData = this.cachedFloatMarkerData[ref]
+    addMarker(objData)
+end
+
+---@param ref tes3reference
+function this.removeRefFromCachedData(ref)
+    if not ref then return end
+
+    this.cachedFloatMarkerData[ref] = nil
+    this.cachedFloatMarkerData[ref.baseObject.id:lower()] = nil
+end
+
+function this.updateCachedData()
+    if not tes3.player then return end
+    local playerCell = tes3.player.cell
+    this.clearCache()
+    if playerCell.isInterior then
+        this.cacheDataOfTrackingObjects(playerCell.editorName:lower())
+    else
+        for _, cellData in pairs(tes3.dataHandler.exteriorCells) do
+            this.cacheDataOfTrackingObjects(cellData.cell.editorName:lower())
+        end
+    end
+end
+
+function this.createMarkersForAllTrackedRefs()
+    if not tes3.player then return end
+    local playerCell = tes3.player.cell
+    if playerCell.isInterior then
+        for ref in playerCell:iterateReferences() do
+            if ref.objectType == tes3.objectType.static then goto continue end
+
+            this.checkRefForMarker(ref)
+
+            ::continue::
+        end
+    else
+        for _, cellData in pairs(tes3.dataHandler.exteriorCells) do
+            for ref in cellData.cell:iterateReferences() do
+                if ref.objectType == tes3.objectType.static then goto continue end
+
+                this.checkRefForMarker(ref)
+
+                ::continue::
+            end
+        end
+    end
+end
 
 function this.reset()
     lastWorldPaneWidth = 0

@@ -1,4 +1,5 @@
 local markerLib = include("diject.map_markers.marker")
+local interop = include("diject.map_markers.interop")
 local log = include("diject.map_markers.utils.log")
 
 --- @param e loadedEventData
@@ -43,39 +44,13 @@ event.register(tes3.event.simulated, simulatedCallback)
 
 --- @param e referenceActivatedEventData
 local function referenceActivatedCallback(e)
-    local ref = e.reference
-    if not ref or ref.disabled or ref.object.objectType == tes3.objectType.static or not ref.cell then return end
-
-    if not markerLib.isReady() then
-        markerLib.init()
-    end
-
-    local cellName = ref.cell.editorName:lower()
-
-    markerLib.cacheDataOfTrackingObjects()
-    markerLib.cacheDataOfTrackingObjects(cellName)
-
-    local function addMarker(objData)
-        if not objData then return end
-        for markerId, data in pairs(objData) do
-            markerLib.addFloatingLocal{ id = data.id, ref = ref }
-        end
-    end
-
-    local objData = markerLib.cachedFloatMarkerData[ref.baseObject.id:lower()]
-    addMarker(objData)
-    objData = markerLib.cachedFloatMarkerData[ref]
-    addMarker(objData)
+    markerLib.checkRefForMarker(e.reference)
 end
 event.register(tes3.event.referenceActivated, referenceActivatedCallback)
 
 --- @param e referenceDeactivatedEventData
 local function referenceDeactivatedCallback(e)
-    local ref = e.reference
-    if not ref then return end
-
-    markerLib.cachedFloatMarkerData[ref] = nil
-    markerLib.cachedFloatMarkerData[ref.baseObject.id:lower()] = nil
+    markerLib.removeRefFromCachedData(e.reference)
 end
 event.register(tes3.event.referenceDeactivated, referenceDeactivatedCallback)
 
@@ -136,14 +111,15 @@ event.register(tes3.event.referenceDeactivated, referenceDeactivatedCallback)
 -- event.register(tes3.event.keyDown, myOnKeyCallback, { filter = tes3.scanCode.y } )
 
 local function myOnKeyCallback(e)
-    local recordId = markerLib.addRecord(nil, {path = "diject\\quest guider\\circleMarker8.dds"})
-    local res, cell = markerLib.addLocal{
-        id = recordId,
-        -- x = tes3.player.position.x,
-        -- y = tes3.player.position.y,
-        -- trackedRef = tes3.player,
-        objectId = "hlaalu guard_outside"
-    }
+    -- local recordId = markerLib.addRecord(nil, {path = "diject\\quest guider\\circleMarker8.dds"})
+    -- local res, cell = markerLib.addLocal{
+    --     id = recordId,
+    --     -- x = tes3.player.position.x,
+    --     -- y = tes3.player.position.y,
+    --     -- trackedRef = tes3.player,
+    --     objectId = "hlaalu guard_outside"
+    -- }
+
     -- local res, cell = markerLib.addLocal{
     --     id = recordId,
     --     x = tes3.player.position.x,
@@ -153,7 +129,14 @@ local function myOnKeyCallback(e)
     --     -- objectId = "hlaalu guard_outside"
     -- }
     -- cellActivatedCallback({cell = tes3.player.cell})
-    markerLib.drawLocaLMarkers(true)
+    -- markerLib.drawLocaLMarkers(true)
+
+    local recordId = interop.addRecord({path = "diject\\quest guider\\circleMarker8.dds"})
+    local marker, cell = interop.addLocalMarker{
+        id = recordId,
+        objectId = "hlaalu guard_outside",
+    }
+    interop.updateLocalMarkers()
 end
 
 event.register(tes3.event.keyDown, myOnKeyCallback, { filter = tes3.scanCode.y } )

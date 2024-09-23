@@ -6,7 +6,6 @@ local this = {}
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
 function this.addLocalMarker(params)
     local ret = markers.addLocal(params)
-    markers.clearCache()
     return ret
 end
 
@@ -15,7 +14,6 @@ end
 ---@return boolean ret returns true if the marker is found and removed. Or false if not found
 function this.removeLocalMarker(id, cellId)
     local ret = markers.removeLocal(id, cellId)
-    markers.clearCache()
     return ret
 end
 
@@ -53,6 +51,8 @@ end
 
 
 function this.updateLocalMarkers()
+    markers.updateCachedData()
+    markers.createMarkersForAllTrackedRefs()
     markers.drawLocaLMarkers(true)
 end
 
