@@ -882,7 +882,6 @@ function this.removeRefFromCachedData(ref)
     if not ref then return end
 
     this.cachedMovingMarkerData[ref] = nil
-    this.cachedMovingMarkerData[ref.baseObject.id:lower()] = nil
 
     this.hasMovingMarkers = not (next(this.cachedMovingMarkerData) == nil)
 end
