@@ -34,7 +34,7 @@ event.register(tes3.event.uiActivated, menuMapActivated, {filter = "MenuMap"})
 
 --- @param e simulatedEventData
 local function simulatedCallback(e)
-    if markerLib.hasFloatMarkers and os.clock() - markerLib.lastLocalUpdate > 0.1 then
+    if markerLib.hasMovingMarkers and os.clock() - markerLib.lastLocalUpdate > 0.1 then
         markerLib.drawLocaLMarkers(false, true)
     end
 end

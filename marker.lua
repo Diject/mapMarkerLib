@@ -26,27 +26,37 @@ this.lastLocalUpdate = 0
 
 local storageData
 
----@type table<string, table<string, markerLib.addLocalMarker.params>>
+---@type table<string, table<string, markerLib.markerData>>
 this.localMap = nil
 this.records = nil
 this.world = nil
 
----@type table<string, table<string, markerLib.addLocalMarker.params>>
-this.cachedFloatMarkerData = {}
+---@type table<string, table<string, markerLib.markerData>>
+this.cachedMovingMarkerData = {}
 ---@type table<string, boolean>
 this.cachedCells = {}
----@type table<tes3reference, markerLib.floatingMarker> by ObjectId
-this.floatingMarkers = {}
-this.hasFloatMarkers = false
+---@type table<string, markerLib.movingMarker> by ObjectId
+this.movingMarkers = {}
+this.hasMovingMarkers = false
 
----@class markerLib.floatingMarker
+---@class markerLib.movingMarker
 ---@field id string
 ---@field markerId string
 ---@field x number|nil
 ---@field y number|nil
 ---@field z number|nil
----@field trackedRef tes3reference|nil
+---@field trackedRef mwseSafeObjectHandle|nil
 ---@field marker tes3uiElement|nil
+
+---@class markerLib.markerData
+---@field id string
+---@field x number|nil
+---@field y number|nil
+---@field z number|nil
+---@field cellName string|nil should be nil if the cell is exterior
+---@field objectId string|nil should be lower
+---@field temporary boolean|nil
+---@field trackedRef mwseSafeObjectHandle|nil
 
 ---@class markerLib.markerRecord
 ---@field path string texture path relative to Data Files\Textures
@@ -76,9 +86,9 @@ function this.init()
     this.records = storageData.records
     this.world = storageData.world
 
-    this.cachedFloatMarkerData = {}
+    this.cachedMovingMarkerData = {}
     this.cachedCells = {}
-    this.floatingMarkers = {}
+    this.movingMarkers = {}
 
     for id, record in pairs(this.records) do
         if record.isTemporary then
@@ -146,7 +156,7 @@ function this.addLocal(params, temp)
         id = params.id,
         objectId = params.objectId,
         temporary = params.temporary,
-        trackedRef = params.trackedRef,
+        trackedRef = params.trackedRef and tes3.makeSafeObjectHandle(params.trackedRef),
         temp = temp
     }
 
@@ -247,7 +257,7 @@ function this.removeRecord(id)
     return false
 end
 
----@return table<string, markerLib.addLocalMarker.params>
+---@return table<string, markerLib.markerData>
 function this.getCellData(cellName)
     if cellName then
         return this.localMap[cellName:lower()]
@@ -459,21 +469,27 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
     local offsetY = 1 - playerMarkerTileY
 
     if removeOldMarkers then
-        this.removeFloatMarkersBindings()
+        this.removeMovingMarkersBindings()
     end
 
     local function updateDunamicMarkers()
-        for ref, data in pairs(this.floatingMarkers) do
+        for refId, data in pairs(this.movingMarkers) do
             if not data.marker then goto continue end
 
             local markerRecord = this.records[data.id]
             if not markerRecord then
                 data.marker:destroy()
-                this.floatingMarkers[ref] = nil
+                this.movingMarkers[refId] = nil
                 goto continue
             end
 
-            local position = ref.position
+            if not data.trackedRef:valid() then
+                data.marker:destroy()
+                this.movingMarkers[refId] = nil
+                goto continue
+            end
+
+            local position = data.trackedRef:getObject().position
             data.x = position.x
             data.y = position.y
             data.z = position.z
@@ -531,6 +547,40 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
                     child:destroy()
                 end
             end
+        end
+    end
+
+    local function createMovingMarkers(placeMarkerFunc)
+        for refId, data in pairs(this.movingMarkers) do
+            if data.marker then
+                childrens[data.markerId] = nil
+                goto continue
+            end
+
+            local markerRecord = this.records[data.id]
+            if not markerRecord then
+                if data.marker then
+                    data.marker:destroy()
+                end
+                this.movingMarkers[refId] = nil
+                goto continue
+            end
+
+            if not data.trackedRef:valid() then
+                if data.marker then
+                    data.marker:destroy()
+                end
+                this.movingMarkers[refId] = nil
+                goto continue
+            end
+
+            local position = data.trackedRef:getObject().position
+            data.x = position.x
+            data.y = position.y
+            data.z = position.z
+            placeMarkerFunc(markerRecord, data.markerId, data, false)
+
+            ::continue::
         end
     end
 
@@ -604,26 +654,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
             end
         end
 
-        for ref, data in pairs(this.floatingMarkers) do
-            if data.marker then
-                childrens[data.markerId] = nil
-                goto continue
-            end
-
-            local markerRecord = this.records[data.id]
-            if not markerRecord then
-                this.floatingMarkers[ref] = nil
-                goto continue
-            end
-
-            local position = ref.position
-            data.x = position.x
-            data.y = position.y
-            data.z = position.z
-            placeMarker(markerRecord, data.markerId, data, false)
-
-            ::continue::
-        end
+        createMovingMarkers(placeMarker)
 
         -- remove all unfound markers
         for id, child in pairs(childrens) do
@@ -695,26 +726,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
             ::continue::
         end
 
-        for ref, data in pairs(this.floatingMarkers) do
-            if data.marker then
-                childrens[data.markerId] = nil
-                goto continue
-            end
-
-            local markerRecord = this.records[data.id]
-            if not markerRecord then
-                this.floatingMarkers[ref] = nil
-                goto continue
-            end
-
-            local position = ref.position
-            data.x = position.x
-            data.y = position.y
-            data.z = position.z
-            placeMarker(markerRecord, data.markerId, data, false)
-
-            ::continue::
-        end
+        createMovingMarkers(placeMarker)
 
         -- remove all unfound markers
         for id, child in pairs(childrens) do
@@ -782,18 +794,18 @@ function this.drawWorldMarkers(forceRedraw)
     end
 end
 
----@class markerLib.addFloatingLocal.params
+---@class markerLib.addMovingLocal.params
 ---@field ref tes3reference
 ---@field id string marker record id
 
----@param params markerLib.addFloatingLocal.params
-function this.addFloatingLocal(params)
+---@param params markerLib.addMovingLocal.params
+function this.addMovingLocal(params)
     local id = getId()
 
-    this.floatingMarkers[params.ref] = {
+    this.movingMarkers[params.ref.id] = {
         id = params.id,
         markerId = id,
-        trackedRef = params.ref,
+        trackedRef = tes3.makeSafeObjectHandle(params.ref),
     }
 end
 
@@ -809,30 +821,31 @@ function this.cacheDataOfTrackingObjects(cellEditorName)
         if not markerRecord then
             cellData[id] = nil
         elseif data.objectId then
-            if not this.cachedFloatMarkerData[data.objectId] then
-                this.cachedFloatMarkerData[data.objectId] = {}
+            if not this.cachedMovingMarkerData[data.objectId] then
+                this.cachedMovingMarkerData[data.objectId] = {}
             end
-            this.cachedFloatMarkerData[data.objectId][id] = data
-        elseif data.trackedRef then
-            if not this.cachedFloatMarkerData[data.trackedRef] then
-                this.cachedFloatMarkerData[data.trackedRef] = {}
+            this.cachedMovingMarkerData[data.objectId][id] = data
+        elseif data.trackedRef and data.trackedRef:valid() then
+            local ref = data.trackedRef:getObject()
+            if not this.cachedMovingMarkerData[ref] then
+                this.cachedMovingMarkerData[ref] = {}
             end
-            this.cachedFloatMarkerData[data.trackedRef][id] = data
+            this.cachedMovingMarkerData[ref][id] = data
         end
     end
 
     this.cachedCells[cellEditorName] = true
-    this.hasFloatMarkers = not (next(this.cachedFloatMarkerData) == nil)
+    this.hasMovingMarkers = not (next(this.cachedMovingMarkerData) == nil)
 end
 
 function this.clearCache()
-    this.cachedFloatMarkerData = {}
-    this.hasFloatMarkers = false
+    this.cachedMovingMarkerData = {}
+    this.hasMovingMarkers = false
     this.cachedCells = {}
 end
 
-function this.removeFloatMarkersBindings()
-    for _, data in pairs(this.floatingMarkers) do
+function this.removeMovingMarkersBindings()
+    for _, data in pairs(this.movingMarkers) do
         data.marker = nil ---@diagnostic disable-line: inject-field
     end
 end
@@ -854,13 +867,13 @@ function this.checkRefForMarker(ref)
     local function addMarker(objData)
         if not objData then return end
         for markerId, data in pairs(objData) do
-            this.addFloatingLocal{ id = data.id, ref = ref }
+            this.addMovingLocal{ id = data.id, ref = ref }
         end
     end
 
-    local objData = this.cachedFloatMarkerData[ref.baseObject.id:lower()]
+    local objData = this.cachedMovingMarkerData[ref.baseObject.id:lower()]
     addMarker(objData)
-    objData = this.cachedFloatMarkerData[ref]
+    objData = this.cachedMovingMarkerData[ref]
     addMarker(objData)
 end
 
@@ -868,10 +881,10 @@ end
 function this.removeRefFromCachedData(ref)
     if not ref then return end
 
-    this.cachedFloatMarkerData[ref] = nil
-    this.cachedFloatMarkerData[ref.baseObject.id:lower()] = nil
+    this.cachedMovingMarkerData[ref] = nil
+    this.cachedMovingMarkerData[ref.baseObject.id:lower()] = nil
 
-    this.hasFloatMarkers = not (next(this.cachedFloatMarkerData) == nil)
+    this.hasMovingMarkers = not (next(this.cachedMovingMarkerData) == nil)
 end
 
 function this.updateCachedData()
@@ -926,10 +939,10 @@ function this.reset()
     this.localMap = nil
     this.records = nil
     this.world = nil
-    this.cachedFloatMarkerData = {}
+    this.cachedMovingMarkerData = {}
     this.cachedCells = {}
-    this.floatingMarkers = {}
-    this.hasFloatMarkers = false
+    this.movingMarkers = {}
+    this.hasMovingMarkers = false
 end
 
 return this
