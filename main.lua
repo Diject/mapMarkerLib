@@ -15,7 +15,7 @@ end
 event.register(tes3.event.load, loadCallback)
 
 --- @param e uiActivatedEventData
-local function uiActMap(e)
+local function menuMapActivated(e)
     if not markerLib.isReady() then
         markerLib.init()
     end
@@ -30,11 +30,11 @@ local function uiActMap(e)
     e.element:updateLayout()
 end
 
-event.register(tes3.event.uiActivated, uiActMap, {filter = "MenuMap"})
+event.register(tes3.event.uiActivated, menuMapActivated, {filter = "MenuMap"})
 
 --- @param e simulatedEventData
 local function simulatedCallback(e)
-    if markerLib.hasFloatMarkers and os.clock() - markerLib.lastLocalUpdate > 0.05 then
+    if markerLib.hasFloatMarkers and os.clock() - markerLib.lastLocalUpdate > 0.1 then
         markerLib.drawLocaLMarkers(false, true)
     end
 end

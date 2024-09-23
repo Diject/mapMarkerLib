@@ -355,29 +355,56 @@ local lastPosX = 99999999
 local lastPosY = 99999999
 local lastCellInteriorFlag = nil
 local axisAngle = 0
+local isSmallMenu
 
 function this.drawLocaLMarkers(forceRedraw, updateMenu)
     local menu = tes3ui.findMenu("MenuMap")
     if not menu then return end
-    local localMap = menu:findChild("MenuMap_local")
-    if not localMap then return end
-    local worldMap = menu:findChild("MenuMap_world")
-    if not worldMap then return end
-    local localPane = localMap:findChild("MenuMap_pane")
-    if not localPane then return end
-    local worldPane = worldMap:findChild("MenuMap_world_pane")
-    if not worldPane then return end
+
+    local localPane
+    local playerMarker
+
+    local shouldUpdate = forceRedraw and true or false
+    local removeOldMarkers = false
+
+    if menu.visible then
+        if isSmallMenu ~= false then
+            removeOldMarkers = true
+            shouldUpdate = true
+        end
+        isSmallMenu = false
+        local localMap = menu:findChild("MenuMap_local")
+        if not localMap then return end
+        localPane = localMap:findChild("MenuMap_pane")
+        if not localPane then return end
+        playerMarker = localPane:findChild("MenuMap_local_player")
+        if not playerMarker then return end
+    else
+        if isSmallMenu ~= true then
+            removeOldMarkers = true
+            shouldUpdate = true
+        end
+        isSmallMenu = true
+        menu = tes3ui.findMenu("MenuMulti")
+        if not menu then return end
+        local localMap = menu:findChild("MenuMap_panel")
+        if not localMap then return end
+        localPane = localMap:findChild("MenuMap_pane")
+        local mapLayout = localMap:findChild("MenuMap_layout")
+        if not mapLayout then return end
+        local plM = localMap:findChild("MenuMap_local_player")
+        if not plM then return end
+        playerMarker = {
+            positionX = -mapLayout.positionX + plM.positionX,
+            positionY = -mapLayout.positionY + plM.positionY,
+        }
+    end
 
     local playerPos = tes3.player.position
     local playerCell = tes3.player.cell
 
-    local playerMarker = localPane:findChild("MenuMap_local_player")
-    if not playerMarker then return end
-
     this.lastLocalUpdate = os.clock()
 
-    local removeOldMarkers = false
-    local shouldUpdate = forceRedraw and true or false
     if math.abs(playerMarker.positionX - lastLocalMarkerPosX) > 500 or math.abs(playerMarker.positionY - lastLocalMarkerPosY) > 500 then
         shouldUpdate = true
     end
@@ -800,6 +827,7 @@ end
 
 function this.clearCache()
     this.cachedFloatMarkerData = {}
+    this.hasFloatMarkers = false
     this.cachedCells = {}
 end
 
@@ -842,6 +870,8 @@ function this.removeRefFromCachedData(ref)
 
     this.cachedFloatMarkerData[ref] = nil
     this.cachedFloatMarkerData[ref.baseObject.id:lower()] = nil
+
+    this.hasFloatMarkers = not (next(this.cachedFloatMarkerData) == nil)
 end
 
 function this.updateCachedData()
@@ -890,6 +920,7 @@ function this.reset()
     lastPosY = 99999999
     lastCellInteriorFlag = nil
     axisAngle = 0
+    isSmallMenu = nil
 
     storageData = nil
     this.localMap = nil
