@@ -46,7 +46,7 @@ this.hasMovingMarkers = false
 ---@field y number|nil
 ---@field z number|nil
 ---@field trackedRef mwseSafeObjectHandle|nil
----@field conditionFunc fun(data: markerLib.movingMarker|markerLib.markerData)|nil
+---@field conditionFunc (fun(data: markerLib.movingMarker|markerLib.markerData):boolean)|nil
 ---@field marker tes3uiElement|nil
 
 ---@class markerLib.markerData
@@ -57,7 +57,7 @@ this.hasMovingMarkers = false
 ---@field markerId string
 ---@field cellName string|nil should be nil if the cell is exterior
 ---@field objectId string|nil should be lowercase
----@field conditionFunc fun(data: markerLib.movingMarker|markerLib.markerData)|nil
+---@field conditionFunc (fun(data: markerLib.movingMarker|markerLib.markerData):boolean)|nil
 ---@field temporary boolean|nil
 ---@field trackedRef mwseSafeObjectHandle|nil
 
@@ -130,7 +130,7 @@ end
 ---@field z number|nil
 ---@field cellName string|nil should be nil if the cell is exterior
 ---@field objectId string|nil should be lowercase
----@field conditionFunc fun(data: markerLib.movingMarker|markerLib.markerData)|nil
+---@field conditionFunc (fun(data: markerLib.movingMarker|markerLib.markerData):boolean)|nil
 ---@field temporary boolean|nil
 ---@field trackedRef tes3reference|nil
 
