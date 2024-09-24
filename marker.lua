@@ -46,6 +46,7 @@ this.hasMovingMarkers = false
 ---@field y number|nil
 ---@field z number|nil
 ---@field trackedRef mwseSafeObjectHandle|nil
+---@field itemId string|nil should be lowercase
 ---@field conditionFunc (fun(data: markerLib.movingMarker|markerLib.markerData):boolean)|nil
 ---@field marker tes3uiElement|nil
 
@@ -57,6 +58,7 @@ this.hasMovingMarkers = false
 ---@field markerId string
 ---@field cellName string|nil should be nil if the cell is exterior
 ---@field objectId string|nil should be lowercase
+---@field itemId string|nil should be lowercase
 ---@field conditionFunc (fun(data: markerLib.movingMarker|markerLib.markerData):boolean)|nil
 ---@field temporary boolean|nil
 ---@field trackedRef mwseSafeObjectHandle|nil
@@ -130,6 +132,7 @@ end
 ---@field z number|nil
 ---@field cellName string|nil should be nil if the cell is exterior
 ---@field objectId string|nil should be lowercase
+---@field itemId string|nil should be lowercase
 ---@field conditionFunc (fun(data: markerLib.movingMarker|markerLib.markerData):boolean)|nil
 ---@field temporary boolean|nil
 ---@field trackedRef tes3reference|nil
@@ -160,6 +163,7 @@ function this.addLocal(params)
         id = params.id,
         markerId = id,
         objectId = params.objectId,
+        itemId = params.itemId,
         temporary = params.temporary,
         trackedRef = params.trackedRef and tes3.makeSafeObjectHandle(params.trackedRef),
         conditionFunc = params.conditionFunc
@@ -369,30 +373,33 @@ end
 ---@return boolean|nil
 local function checkConditionsToRemoveForMarkerData(data, destroyMarker)
     local markerRecord = this.records[data.id]
+    local ret = false
     if not markerRecord then
-        if data.marker and destroyMarker then
-            data.marker:destroy()
-        end
-        return true
+        ret = ret or true
     end
 
     if not data.trackedRef:valid() then
-        if data.marker and destroyMarker then
-            data.marker:destroy()
-        end
+        ret = ret or true
         return true
     end
 
-    if data.conditionFunc then
-        if not data.conditionFunc(data) then
-            if data.marker and destroyMarker then
-                data.marker:destroy()
-            end
-            return true
+    if data.conditionFunc and not data.conditionFunc(data) then
+        ret = ret or true
+    end
+
+    if data.itemId then
+        local ref = data.trackedRef:getObject()
+        local inventory = ref.object.inventory
+        if inventory and inventory:getItemCount(data.itemId) <= 0 then
+            ret = ret or true
         end
     end
 
-    return false
+    if ret and data.marker and destroyMarker then
+        data.marker:destroy()
+    end
+
+    return ret
 end
 
 local lastLocalMarkerPosX = 99999999
@@ -508,19 +515,11 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
         this.removeMovingMarkersBindings()
     end
 
-    local function updateDunamicMarkers()
+    local function updateDynamicMarkers()
         for refId, data in pairs(this.movingMarkers) do
             if not data.marker then goto continue end
 
-            local markerRecord = this.records[data.id]
-            if not markerRecord then
-                data.marker:destroy()
-                this.movingMarkers[refId] = nil
-                goto continue
-            end
-
-            if not data.trackedRef:valid() then
-                data.marker:destroy()
+            if checkConditionsToRemoveForMarkerData(data, true) then
                 this.movingMarkers[refId] = nil
                 goto continue
             end
@@ -530,19 +529,20 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
             data.y = position.y
             data.z = position.z
 
+            local markerRecord = this.records[data.id]
             if playerCell.isInterior then
-                    local xShift = (data.x - playerPos.x)
-                    local yShift = (playerPos.y - data.y)
+                local xShift = (data.x - playerPos.x)
+                local yShift = (playerPos.y - data.y)
 
-                    local posXNorm = xShift * math.cos(axisAngle) + yShift * math.sin(axisAngle)
-                    local posYNorm = yShift * math.cos(axisAngle) - xShift * math.sin(axisAngle)
+                local posXNorm = xShift * math.cos(axisAngle) + yShift * math.sin(axisAngle)
+                local posYNorm = yShift * math.cos(axisAngle) - xShift * math.sin(axisAngle)
 
-                    local posX = playerMarkerX + posXNorm / widthPerPix
-                    local posY = playerMarkerY - posYNorm / heightPerPix
+                local posX = playerMarkerX + posXNorm / widthPerPix
+                local posY = playerMarkerY - posYNorm / heightPerPix
 
-                    if math.abs(data.marker.positionX - posX) > 2 or math.abs(data.marker.positionY - posY) > 2 then
-                        changeMarkerPosition(data.marker, posX, posY, markerRecord)
-                    end
+                if math.abs(data.marker.positionX - posX) > 2 or math.abs(data.marker.positionY - posY) > 2 then
+                    changeMarkerPosition(data.marker, posX, posY, markerRecord)
+                end
             else
                 local posX = (offsetX + 1 + math.floor(data.x / 8192) - math.floor(playerPos.x / 8192) + (data.x % 8192) / 8192) * tileWidth
                 local posY = -(-offsetY + 2 - (math.floor(data.y / 8192) - math.floor(playerPos.y / 8192) + (data.y % 8192) / 8192)) * tileHeight
@@ -556,7 +556,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
         end
     end
 
-    updateDunamicMarkers()
+    updateDynamicMarkers()
 
     if not shouldUpdate then
         if updateMenu then
@@ -822,6 +822,8 @@ end
 ---@class markerLib.addMovingLocal.params
 ---@field ref tes3reference
 ---@field id string marker record id
+---@field itemId string|nil should be lowercase
+---@field conditionFunc (fun(data: markerLib.movingMarker|markerLib.markerData):boolean)|nil
 
 ---@param params markerLib.addMovingLocal.params
 function this.addMovingLocal(params)
@@ -831,6 +833,8 @@ function this.addMovingLocal(params)
         id = params.id,
         markerId = id,
         trackedRef = tes3.makeSafeObjectHandle(params.ref),
+        itemId = params.itemId,
+        conditionFunc = params.conditionFunc,
     }
 end
 
@@ -889,10 +893,11 @@ function this.checkRefForMarker(ref)
     this.cacheDataOfTrackingObjects()
     this.cacheDataOfTrackingObjects(cellName)
 
+    ---@param objData table<string, markerLib.markerData>
     local function addMarker(objData)
         if not objData then return end
         for markerId, data in pairs(objData) do
-            this.addMovingLocal{ id = data.id, ref = ref }
+            this.addMovingLocal{ id = data.id, ref = ref, itemId = data.itemId, conditionFunc = data.conditionFunc }
         end
     end
 
