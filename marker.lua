@@ -258,6 +258,7 @@ end
 ---@param id string record id
 ---@return boolean ret returns true if the record is found and removed. Or false if not found
 function this.removeRecord(id)
+    if not id then return false end
     local rec = this.records[id]
     if rec then
         this.records[id] = nil
