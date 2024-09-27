@@ -42,6 +42,13 @@ function this.updateRecord(id, params)
     return markers.addRecord(id, params)
 end
 
+---Returns record data. You can change the data on the fly. Dangerous method!!!
+---@param id string
+---@return markerLib.markerRecord|nil
+function this.getRecord(id)
+    return markers.getRecord(id)
+end
+
 ---@param id string record id
 ---@return boolean ret returns true if the record found and removed. Or false if unfound
 function this.removeRecord(id)
@@ -50,10 +57,11 @@ end
 
 
 
-function this.updateLocalMarkers()
+---@param recreate boolean|nil if true, markers will be removed and created again. Otherwise it will just update their positions
+function this.updateLocalMarkers(recreate)
     markers.updateCachedData()
     markers.createMarkersForAllTrackedRefs()
-    markers.drawLocaLMarkers(true)
+    markers.drawLocaLMarkers(true, nil, recreate)
 end
 
 function this.updateWorldMarkers()

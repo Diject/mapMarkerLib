@@ -267,6 +267,13 @@ function this.removeRecord(id)
     return false
 end
 
+---@param id string
+---@return markerLib.markerRecord|nil
+function this.getRecord(id)
+    if not this.records or not id then return end
+    return this.records[id]
+end
+
 ---@return table<string, markerLib.markerData>
 function this.getCellData(cellName)
     if cellName then
@@ -411,19 +418,19 @@ local lastCellInteriorFlag = nil
 local axisAngle = 0
 local isSmallMenu
 
-function this.drawLocaLMarkers(forceRedraw, updateMenu)
+function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
     local menu = tes3ui.findMenu("MenuMap")
     if not menu then return end
 
     local localPane
     local playerMarker
 
-    local shouldUpdate = forceRedraw and true or false
-    local removeOldMarkers = false
+    local shouldUpdate = forceUpdate and true or false
+    recreateMarkers = recreateMarkers or false
 
     if menu.visible then
         if isSmallMenu ~= false then
-            removeOldMarkers = true
+            recreateMarkers = true
             shouldUpdate = true
         end
         isSmallMenu = false
@@ -435,7 +442,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
         if not playerMarker then return end
     else
         if isSmallMenu ~= true then
-            removeOldMarkers = true
+            recreateMarkers = true
             shouldUpdate = true
         end
         isSmallMenu = true
@@ -466,7 +473,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
     lastLocalMarkerPosY = playerMarker.positionY
 
     if lastCellInteriorFlag ~= playerCell.isInterior then
-        removeOldMarkers = true
+        recreateMarkers = true
         axisAngle = 0
         if playerCell.isInterior then
             for ref in playerCell:iterateReferences(tes3.objectType.static) do
@@ -512,7 +519,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
     local offsetX = 1 - playerMarkerTileX
     local offsetY = 1 - playerMarkerTileY
 
-    if removeOldMarkers then
+    if recreateMarkers then
         this.removeDynamicMarkersBindings()
     end
 
@@ -572,7 +579,7 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
     local childrens = {}
     for _, child in pairs(localPane.children) do
         if child.name == markerLabelId then
-            if removeOldMarkers then
+            if recreateMarkers then
                 child:destroy()
             else
                 local ids = child:getLuaData("ids")
@@ -683,8 +690,12 @@ function this.drawLocaLMarkers(forceRedraw, updateMenu)
         createDynamicMarkers(placeMarker)
 
         -- remove all unfound markers
+        local markerElements = {}
         for id, child in pairs(childrens) do
-            child:destroy()
+            markerElements[child] = true
+        end
+        for el, _ in pairs(markerElements) do
+            el:destroy()
         end
 
     else -- for interior cells
