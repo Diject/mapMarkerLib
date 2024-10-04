@@ -1,4 +1,4 @@
-local modLabel = "[Quest Guider]"
+local modLabel = "[Marker Lib]"
 
 local function logTable(table, prefix)
     for name, val in pairs(table) do
