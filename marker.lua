@@ -35,12 +35,12 @@ this.world = nil
 this.cachedDynamicMarkerData = {}
 ---@type table<string, boolean>
 this.cachedCells = {}
----@type table<string, markerLib.dynamicMarker> by ObjectId
+---@type table<string, markerLib.dynamicMarker> by ref id
 this.dynamicMarkers = {}
 this.hasDynamicMarkers = false
 
 ---@class markerLib.dynamicMarker
----@field id string
+---@field id table<string, markerLib.markerRecord> by record id
 ---@field markerId string
 ---@field x number|nil
 ---@field y number|nil
@@ -383,11 +383,13 @@ local function getMaxPriorityRecord(element)
 end
 
 ---@param markerEl tes3uiElement
----@param record markerLib.markerRecord
+---@param record markerLib.markerRecord|nil
 ---@return tes3uiElement|nil
 local function changeMarker(markerEl, x, y, record)
     ---@type markerLib.markerRecord
     local rec = getMaxPriorityRecord(markerEl) or record
+
+    if not rec then return end
 
     local imageRecId = markerEl:getLuaData("iamgeRecordId")
     if imageRecId ~= rec.id then
@@ -419,14 +421,32 @@ local function addInfoToMarker(markerElement, recordToAdd)
     end
 end
 
+---@param tb table<string, markerLib.markerRecord>
+---@return markerLib.markerRecord|nil
+local function getMaxPriorityRecordFromTable(tb)
+    local ret
+    for id, rec in pairs(tb) do
+        if not ret then
+            ret = rec
+        elseif ret.priority < rec.priority then
+            ret = rec
+        end
+    end
+    return ret
+end
+
 ---@param data markerLib.markerData|markerLib.dynamicMarker
 ---@param destroyMarker boolean|nil
----@return boolean|nil
-local function checkConditionsToRemoveForMarkerData(data, destroyMarker)
-    local markerRecord = this.records[data.id]
+---@return boolean|nil ret returns true if marker should to remove
+local function checkConditionsToRemoveForDynamicMarker(data, destroyMarker)
     local ret = false
-    if not markerRecord then
-        ret = ret or true
+    for id, record in pairs(data.id) do
+        if not this.records[id] then
+            data.id[id] = nil
+        end
+        if table.size(data.id) == 0 then
+            ret = ret or true
+        end
     end
 
     if not data.trackedRef:valid() then
@@ -570,9 +590,15 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
         for refId, data in pairs(this.dynamicMarkers) do
             if not data.marker then goto continue end
 
-            if checkConditionsToRemoveForMarkerData(data, true) then
+            if checkConditionsToRemoveForDynamicMarker(data, true) then
                 this.dynamicMarkers[refId] = nil
                 goto continue
+            end
+
+            local luaData = data.marker:getLuaData("records")
+            table.clear(luaData)
+            for id, rec in pairs(data.id) do
+                table.insert(luaData, rec)
             end
 
             local position = data.trackedRef:getObject().position
@@ -580,7 +606,6 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
             data.y = position.y
             data.z = position.z
 
-            local markerRecord = this.records[data.id]
             if playerCell.isInterior then
                 local xShift = (data.x - playerPos.x)
                 local yShift = (playerPos.y - data.y)
@@ -592,14 +617,14 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
                 local posY = playerMarkerY - posYNorm / heightPerPix
 
                 if math.abs(data.marker.positionX - posX) > 2 or math.abs(data.marker.positionY - posY) > 2 then
-                    changeMarker(data.marker, posX, posY, markerRecord)
+                    changeMarker(data.marker, posX, posY)
                 end
             else
                 local posX = (offsetX + 1 + math.floor(data.x / 8192) - math.floor(playerPos.x / 8192) + (data.x % 8192) / 8192) * tileWidth
                 local posY = -(-offsetY + 2 - (math.floor(data.y / 8192) - math.floor(playerPos.y / 8192) + (data.y % 8192) / 8192)) * tileHeight
 
                 if math.abs(data.marker.positionX - posX) > 2 or math.abs(data.marker.positionY - posY) > 2 then
-                    changeMarker(data.marker, posX, posY, markerRecord)
+                    changeMarker(data.marker, posX, posY)
                 end
             end
 
@@ -640,11 +665,21 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
     local function createDynamicMarkers(placeMarkerFunc)
         for refId, data in pairs(this.dynamicMarkers) do
             if data.marker then
+                local luaData = data.marker:getLuaData("records")
+                table.clear(luaData)
+                for id, rec in pairs(data.id) do
+                    local record = this.records[id]
+                    if record then
+                        table.insert(luaData, record)
+                    else
+                        data.id[id] = nil
+                    end
+                end
                 childrens[data.markerId] = nil
                 goto continue
             end
 
-            if checkConditionsToRemoveForMarkerData(data, true) then
+            if checkConditionsToRemoveForDynamicMarker(data, true) then
                 this.dynamicMarkers[refId] = nil
                 goto continue
             end
@@ -653,7 +688,10 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
             data.x = position.x
             data.y = position.y
             data.z = position.z
-            local markerRecord = this.records[data.id]
+
+            local markerRecord = getMaxPriorityRecordFromTable(data.id)
+            if not markerRecord then goto continue end
+
             placeMarkerFunc(markerRecord, data.markerId, data, false)
 
             ::continue::
@@ -882,13 +920,17 @@ end
 function this.addDynamicLocal(params)
     local id = getId()
 
-    this.dynamicMarkers[params.ref.id] = {
-        id = params.id,
-        markerId = id,
-        trackedRef = tes3.makeSafeObjectHandle(params.ref),
-        itemId = params.itemId,
-        conditionFunc = params.conditionFunc,
-    }
+    if not this.dynamicMarkers[params.ref.id] then
+        this.dynamicMarkers[params.ref.id] = {
+            id = {},
+            markerId = id,
+            trackedRef = tes3.makeSafeObjectHandle(params.ref),
+            itemId = params.itemId,
+            conditionFunc = params.conditionFunc,
+        }
+    end
+
+    this.dynamicMarkers[params.ref.id].id[params.id] = this.records[params.id]
 end
 
 
