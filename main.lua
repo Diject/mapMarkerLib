@@ -34,7 +34,7 @@ event.register(tes3.event.uiActivated, menuMapActivated, {filter = "MenuMap"})
 
 --- @param e simulatedEventData
 local function simulatedCallback(e)
-    if markerLib.hasMovingMarkers and os.clock() - markerLib.lastLocalUpdate > 0.1 then
+    if markerLib.hasDynamicMarkers and os.clock() - markerLib.lastLocalUpdate > 0.1 then
         markerLib.drawLocaLMarkers(false, true)
     end
 end
@@ -109,9 +109,10 @@ event.register(tes3.event.referenceDeactivated, referenceDeactivatedCallback)
 -- end
 
 -- event.register(tes3.event.keyDown, myOnKeyCallback, { filter = tes3.scanCode.y } )
-
+local recordId
 local function myOnKeyCallback(e)
-    -- local recordId = markerLib.addRecord(nil, {path = "diject\\quest guider\\circleMarker8.dds"})
+    local priority = math.random(1, 100)
+    recordId = markerLib.addRecord(nil, {path = "diject\\quest guider\\circleMarker8.dds", name = tostring(priority), priority = priority})
     -- local res, cell = markerLib.addLocal{
     --     id = recordId,
     --     -- x = tes3.player.position.x,
@@ -120,7 +121,7 @@ local function myOnKeyCallback(e)
     --     objectId = "hlaalu guard_outside"
     -- }
 
-    -- local res, cell = markerLib.addLocal{
+    -- local res, cell = interop.addLocalMarker{
     --     id = recordId,
     --     x = tes3.player.position.x,
     --     y = tes3.player.position.y,
@@ -128,15 +129,20 @@ local function myOnKeyCallback(e)
     --     -- trackedRef = tes3.player,
     --     -- objectId = "hlaalu guard_outside"
     -- }
-    -- cellActivatedCallback({cell = tes3.player.cell})
     -- markerLib.drawLocaLMarkers(true)
 
-    local recordId = interop.addRecord({path = "diject\\quest guider\\circleMarker8.dds"})
     local marker, cell = interop.addLocalMarker{
         id = recordId,
         objectId = "hlaalu guard_outside",
+        itemId = "torch_infinite_time",
     }
-    interop.updateLocalMarkers()
+    interop.updateLocalMarkers(true)
 end
 
 event.register(tes3.event.keyDown, myOnKeyCallback, { filter = tes3.scanCode.y } )
+
+local function myOnKeyCallback1(e)
+    interop.removeRecord(recordId)
+    interop.updateLocalMarkers(true)
+end
+event.register(tes3.event.keyDown, myOnKeyCallback1, { filter = tes3.scanCode.u } )
