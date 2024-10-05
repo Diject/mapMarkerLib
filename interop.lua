@@ -58,10 +58,10 @@ end
 
 
 ---@param recreate boolean|nil if true, markers will be removed and created again. Otherwise it will just update their positions
-function this.updateLocalMarkers(recreate)
+function this.updateLocalMarkers(recreate, updateMenu)
     markers.updateCachedData()
     markers.createMarkersForAllTrackedRefs()
-    markers.drawLocaLMarkers(true, nil, recreate)
+    markers.drawLocaLMarkers(true, updateMenu, recreate)
 end
 
 function this.updateWorldMarkers()
