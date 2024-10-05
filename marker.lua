@@ -64,12 +64,14 @@ this.hasDynamicMarkers = false
 ---@field trackedRef mwseSafeObjectHandle|nil
 
 ---@class markerLib.markerRecord
+---@field id string|nil
 ---@field path string texture path relative to Data Files\Textures
 ---@field width integer|nil texture width
 ---@field height integer|nil texture height
 ---@field textureShiftX integer|nil
 ---@field textureShiftY integer|nil
 ---@field scale number|nil
+---@field priority number|nil
 ---@field name string|nil
 ---@field description string|nil
 ---@field color number[]|nil {r, g, b} [0, 1]
@@ -243,12 +245,15 @@ function this.addRecord(id, params)
     record.isTemporary = params.isTemporary
     record.color = params.color
     record.scale = params.scale
+    record.priority = params.priority
 
     if not id then
         id = getId()
     elseif not this.records[id] then
         return
     end
+
+    record.id = id
 
     this.records[id] = record
 
@@ -293,6 +298,8 @@ local function drawMarker(pane, x, y, record)
 
     local image = pane:createImage{id = markerLabelId, path = record.path}
 
+    image:setLuaData("iamgeRecordId", record.id)
+
     image.autoHeight = true
     image.autoWidth = true
     image.absolutePosAlignX = -32668
@@ -310,10 +317,14 @@ local function drawMarker(pane, x, y, record)
         local luaData = e.source:getLuaData("records")
         if not luaData then return end
 
+        table.sort(luaData, function (a, b)
+            return (a.priority or 0) > (b.priority or 0)
+        end)
+
         local tooltip = tes3ui.createTooltipMenu()
 
         local blockCount = 0
-        for i, rec in pairs(luaData) do
+        for i, rec in ipairs(luaData) do
             if not rec.name and not rec.description then goto continue end
 
             local block = tooltip:createBlock{id = tooltipBlock}
@@ -356,12 +367,42 @@ local function drawMarker(pane, x, y, record)
     return image
 end
 
+---@param element tes3uiElement
+---@return markerLib.markerRecord|nil
+local function getMaxPriorityRecord(element)
+    if not element then return end
+
+    local luaData = element:getLuaData("records")
+    if not luaData or #luaData == 0 then return end
+
+    table.sort(luaData, function (a, b)
+        return (a.priority or 0) > (b.priority or 0)
+    end)
+
+    return luaData[1]
+end
+
 ---@param markerEl tes3uiElement
 ---@param record markerLib.markerRecord
 ---@return tes3uiElement|nil
-local function changeMarkerPosition(markerEl, x, y, record)
-    markerEl.positionX = x - record.width / 2
-    markerEl.positionY = y + record.height / 2
+local function changeMarker(markerEl, x, y, record)
+    ---@type markerLib.markerRecord
+    local rec = getMaxPriorityRecord(markerEl) or record
+
+    local imageRecId = markerEl:getLuaData("iamgeRecordId")
+    if imageRecId ~= rec.id then
+        markerEl.texture = niSourceTexture.createFromPath(rec.path)
+        markerEl:setLuaData("iamgeRecordId", rec.id)
+
+        markerEl.imageScaleX = rec.scale or 1
+        markerEl.imageScaleY = rec.scale or 1
+        markerEl.color = rec.color or {1, 1, 1}
+    end
+
+    if x and y then
+        markerEl.positionX = x + (rec.textureShiftX or -rec.width / 2)
+        markerEl.positionY = y + (rec.textureShiftY or rec.height / 2)
+    end
 end
 
 ---@param markerElement tes3uiElement
@@ -373,6 +414,8 @@ local function addInfoToMarker(markerElement, recordToAdd)
     if luaData then
         table.insert(luaData, recordToAdd)
         markerElement:setLuaData("records", luaData)
+
+        changeMarker(markerElement, nil, nil, recordToAdd)
     end
 end
 
@@ -549,14 +592,14 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
                 local posY = playerMarkerY - posYNorm / heightPerPix
 
                 if math.abs(data.marker.positionX - posX) > 2 or math.abs(data.marker.positionY - posY) > 2 then
-                    changeMarkerPosition(data.marker, posX, posY, markerRecord)
+                    changeMarker(data.marker, posX, posY, markerRecord)
                 end
             else
                 local posX = (offsetX + 1 + math.floor(data.x / 8192) - math.floor(playerPos.x / 8192) + (data.x % 8192) / 8192) * tileWidth
                 local posY = -(-offsetY + 2 - (math.floor(data.y / 8192) - math.floor(playerPos.y / 8192) + (data.y % 8192) / 8192)) * tileHeight
 
                 if math.abs(data.marker.positionX - posX) > 2 or math.abs(data.marker.positionY - posY) > 2 then
-                    changeMarkerPosition(data.marker, posX, posY, markerRecord)
+                    changeMarker(data.marker, posX, posY, markerRecord)
                 end
             end
 
@@ -626,9 +669,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
         local allowedError = 8
 
         local function placeMarker(markerRecord, markerId, markerData, combine)
-            -- local posX = (offsetX + i + 1 + (markerData.x % 8192) / 8192) * tileWidth
             local posX = (offsetX + 1 + math.floor(markerData.x / 8192) - math.floor(playerPos.x / 8192) + (markerData.x % 8192) / 8192) * tileWidth
-            -- local posY = -(-offsetY + 2 - (j + (markerData.y % 8192) / 8192)) * tileHeight
             local posY = -(-offsetY + 2 - (math.floor(markerData.y / 8192) - math.floor(playerPos.y / 8192) + (markerData.y % 8192) / 8192)) * tileHeight
 
             local markerMapId = tostring(math.floor(posX / 3))..","..tostring(math.floor(posY / 3))
@@ -639,7 +680,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
 
             if foundEl then
                 if math.abs(foundEl.positionX - posX) > allowedError or math.abs(foundEl.positionY - posY) > allowedError then
-                    changeMarkerPosition(foundEl, posX, posY, markerRecord)
+                    changeMarker(foundEl, posX, posY, markerRecord)
                 end
                 if combine then
                     markerMap[markerMapId] = foundEl
@@ -721,7 +762,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
 
             if foundEl then
                 if math.abs(foundEl.positionX - posX) > allowedError or math.abs(foundEl.positionY - posY) > allowedError then
-                    changeMarkerPosition(foundEl, posX, posY, markerRecord)
+                    changeMarker(foundEl, posX, posY, markerRecord)
                 end
                 if combine then
                     markerMap[markerMapId] = foundEl
