@@ -28,7 +28,9 @@ local storageData
 
 ---@type table<string, table<string, markerLib.markerData>>
 this.localMap = nil
+---@type table<string, table<string, markerLib.markerRecord>>
 this.records = nil
+---@type table<string, markerLib.markerData>
 this.world = nil
 
 ---@type table<string, table<string, markerLib.markerData>>
@@ -75,7 +77,7 @@ this.hasDynamicMarkers = false
 ---@field name string|nil
 ---@field description string|nil
 ---@field color number[]|nil {r, g, b} [0, 1]
----@field isTemporary boolean|nil
+---@field temporary boolean|nil
 
 local function getId()
     local id = string.format("%.0f", storageData.id)
@@ -98,15 +100,19 @@ function this.init()
     this.dynamicMarkers = {}
 
     for id, record in pairs(this.records) do
-        if record.isTemporary then
+        if record.temporary then
             this.records[id] = nil
         end
     end
 
     for cellId, dt in pairs(this.localMap) do
         for mrkId, data in pairs(dt) do
+            if data.temporary or data.trackedRef then
+                dt[mrkId] = nil
+                goto continue
+            end
             local record = this.records[data.id]
-            if not record or data.temporary then
+            if not record then
                 dt[mrkId] = nil
                 goto continue
             end
@@ -205,6 +211,7 @@ function this.addWorld(params)
         x = params.x,
         y = params.y,
         id = params.id,
+        markerId = id,
     }
 
     return id
@@ -242,7 +249,7 @@ function this.addRecord(id, params)
 
     record.name = params.name
     record.description = params.description
-    record.isTemporary = params.isTemporary
+    record.temporary = params.temporary
     record.color = params.color
     record.scale = params.scale
     record.priority = params.priority
