@@ -55,13 +55,17 @@ function this.removeRecord(id)
     return markers.removeRecord(id)
 end
 
+---@class markerLib.interop.updateLocalMarkers.params
+---@field recreate boolean|nil if true, markers will be removed and created again. Otherwise it will just update their positions
+---@field updateMenu boolean|nil if true, the map menu will be updated after the markers are updated. Default: true
 
-
----@param recreate boolean|nil if true, markers will be removed and created again. Otherwise it will just update their positions
-function this.updateLocalMarkers(recreate, updateMenu)
+---@param params markerLib.interop.updateLocalMarkers.params|nil
+function this.updateLocalMarkers(params)
+    if not params then params = {} end
+    params.updateMenu = params.updateMenu or true
     markers.updateCachedData()
     markers.createMarkersForAllTrackedRefs()
-    markers.drawLocaLMarkers(true, updateMenu, recreate)
+    markers.drawLocaLMarkers(true, params.updateMenu, params.recreate)
 end
 
 function this.updateWorldMarkers()
