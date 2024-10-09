@@ -609,6 +609,11 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
             end
 
             local position = data.trackedRef:getObject().position
+
+            if data.x == position.x and data.y == position.y and data.z == position.z then
+                goto continue
+            end
+
             data.x = position.x
             data.y = position.y
             data.z = position.z
