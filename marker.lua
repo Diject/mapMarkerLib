@@ -414,6 +414,18 @@ local function changeMarker(markerEl, x, y, record)
     end
 end
 
+local function isMarkerPositionChanged(markerEl, x, y)
+    ---@type markerLib.markerRecord
+    local rec = getMaxPriorityRecord(markerEl)
+    if not rec then return true end
+
+    if not math.isclose(markerEl.positionX, (x + (rec.textureShiftX or -rec.width / 2)), 2) or
+            not math.isclose(markerEl.positionY - (y + (rec.textureShiftY or rec.height / 2)), 2) then
+        return true
+    end
+    return false
+end
+
 ---@param markerElement tes3uiElement
 ---@param recordToAdd markerLib.markerRecord
 local function addInfoToMarker(markerElement, recordToAdd)
@@ -617,7 +629,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
 
             local position = data.trackedRef:getObject().position
 
-            if data.x == position.x and data.y == position.y and data.z == position.z then
+            if math.isclose(data.x, position.x, 1) and math.isclose(data.y, position.y, 1) and math.isclose(data.z, position.z, 1) then
                 goto continue
             end
 
@@ -635,14 +647,14 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
                 local posX = playerMarkerX + posXNorm / widthPerPix
                 local posY = playerMarkerY - posYNorm / heightPerPix
 
-                if math.abs(data.marker.positionX - posX) > 4 or math.abs(data.marker.positionY - posY) > 4 then
+                if isMarkerPositionChanged(data.marker, posX, posY) then
                     changeMarker(data.marker, posX, posY)
                 end
             else
                 local posX = (offsetX + 1 + math.floor(data.x / 8192) - math.floor(playerPos.x / 8192) + (data.x % 8192) / 8192) * tileWidth
                 local posY = -(-offsetY + 2 - (math.floor(data.y / 8192) - math.floor(playerPos.y / 8192) + (data.y % 8192) / 8192)) * tileHeight
 
-                if math.abs(data.marker.positionX - posX) > 4 or math.abs(data.marker.positionY - posY) > 4 then
+                if isMarkerPositionChanged(data.marker, posX, posY) then
                     changeMarker(data.marker, posX, posY)
                 end
             end
