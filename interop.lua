@@ -62,7 +62,7 @@ end
 ---@param params markerLib.interop.updateLocalMarkers.params|nil
 function this.updateLocalMarkers(params)
     if not params then params = {} end
-    params.updateMenu = params.updateMenu or true
+    params.updateMenu = params.updateMenu == true and true or false
     markers.updateCachedData()
     markers.createMarkersForAllTrackedRefs()
     markers.drawLocaLMarkers(true, params.updateMenu, params.recreate)
