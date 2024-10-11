@@ -487,7 +487,7 @@ local lastLocalMarkerPosX = 99999999
 local lastLocalMarkerPosY = 99999999
 local lastPosX = 99999999
 local lastPosY = 99999999
-local lastCellInteriorFlag = nil
+local lastCell = nil
 local axisAngle = 0
 local isSmallMiniMapMenu
 
@@ -547,15 +547,17 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
     lastLocalMarkerPosX = playerMarker.positionX
     lastLocalMarkerPosY = playerMarker.positionY
 
-    if lastCellInteriorFlag ~= playerCell.isInterior then
+    if not lastCell or lastCell.editorName ~= playerCell.editorName then
         recreateMarkers = true
         axisAngle = 0
         if playerCell.isInterior then
             for ref in playerCell:iterateReferences(tes3.objectType.static) do
-                if ref.id:lower() == "northmarker" then
+                if ref.id == "NorthMarker" then
                     axisAngle = ref.orientation.z
+                    break
                 end
             end
+            firstCellPos = playerPos:copy()
         end
         shouldUpdate = true
     end
@@ -572,7 +574,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
             lastPosY = playerPos.y
         end
     end
-    lastCellInteriorFlag = playerCell.isInterior
+    lastCell = playerCell
 
     local tileHeight
     local tileWidth
@@ -633,14 +635,14 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
                 local posX = playerMarkerX + posXNorm / widthPerPix
                 local posY = playerMarkerY - posYNorm / heightPerPix
 
-                if math.abs(data.marker.positionX - posX) > 2 or math.abs(data.marker.positionY - posY) > 2 then
+                if math.abs(data.marker.positionX - posX) > 4 or math.abs(data.marker.positionY - posY) > 4 then
                     changeMarker(data.marker, posX, posY)
                 end
             else
                 local posX = (offsetX + 1 + math.floor(data.x / 8192) - math.floor(playerPos.x / 8192) + (data.x % 8192) / 8192) * tileWidth
                 local posY = -(-offsetY + 2 - (math.floor(data.y / 8192) - math.floor(playerPos.y / 8192) + (data.y % 8192) / 8192)) * tileHeight
 
-                if math.abs(data.marker.positionX - posX) > 2 or math.abs(data.marker.positionY - posY) > 2 then
+                if math.abs(data.marker.positionX - posX) > 4 or math.abs(data.marker.positionY - posY) > 4 then
                     changeMarker(data.marker, posX, posY)
                 end
             end
@@ -1072,7 +1074,7 @@ function this.reset()
     lastLocalMarkerPosY = 99999999
     lastPosX = 99999999
     lastPosY = 99999999
-    lastCellInteriorFlag = nil
+    lastCell = nil
     axisAngle = 0
     isSmallMiniMapMenu = nil
 
