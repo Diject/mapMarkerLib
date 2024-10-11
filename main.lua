@@ -4,7 +4,9 @@ local log = include("diject.map_markers.utils.log")
 
 --- @param e loadedEventData
 local function loadedCallback(e)
-    markerLib.init()
+    if not markerLib.isReady() then
+        markerLib.init()
+    end
 end
 event.register(tes3.event.loaded, loadedCallback, {priority = 99999})
 
@@ -51,9 +53,15 @@ event.register(tes3.event.referenceActivated, referenceActivatedCallback)
 --- @param e referenceDeactivatedEventData
 local function referenceDeactivatedCallback(e)
     markerLib.removeRefFromCachedData(e.reference)
+    markerLib.removeDynamicMarkerData(e.reference)
 end
 event.register(tes3.event.referenceDeactivated, referenceDeactivatedCallback)
 
+--- @param e cellDeactivatedEventData
+local function cellDeactivatedCallback(e)
+    markerLib.clearCache()
+end
+event.register(tes3.event.cellDeactivated, cellDeactivatedCallback)
 
 -- local markerPos
 -- local marker
@@ -136,13 +144,13 @@ local function myOnKeyCallback(e)
         objectId = "hlaalu guard_outside",
         itemId = "torch_infinite_time",
     }
-    interop.updateLocalMarkers(true)
+    interop.updateLocalMarkers()
 end
 
-event.register(tes3.event.keyDown, myOnKeyCallback, { filter = tes3.scanCode.y } )
+-- event.register(tes3.event.keyDown, myOnKeyCallback, { filter = tes3.scanCode.y } )
 
 local function myOnKeyCallback1(e)
     interop.removeRecord(recordId)
-    interop.updateLocalMarkers(true)
+    interop.updateLocalMarkers()
 end
-event.register(tes3.event.keyDown, myOnKeyCallback1, { filter = tes3.scanCode.u } )
+-- event.register(tes3.event.keyDown, myOnKeyCallback1, { filter = tes3.scanCode.u } )

@@ -628,7 +628,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
 
             local position = data.trackedRef:getObject().position
 
-            if math.isclose(data.x, position.x, 1) and math.isclose(data.y, position.y, 1) and math.isclose(data.z, position.z, 1) then
+            if not shouldUpdate and math.isclose(data.x, position.x, 1) and math.isclose(data.y, position.y, 1) and math.isclose(data.z, position.z, 1) then
                 goto continue
             end
 
@@ -996,6 +996,11 @@ function this.clearCache()
     this.cachedDynamicMarkerData = {}
     this.hasDynamicMarkers = false
     this.cachedCells = {}
+end
+
+---@param ref tes3reference
+function this.removeDynamicMarkerData(ref)
+    this.dynamicMarkers[ref.id] = nil
 end
 
 function this.removeDynamicMarkersBindings()
