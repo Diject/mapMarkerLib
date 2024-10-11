@@ -569,7 +569,6 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
                     break
                 end
             end
-            firstCellPos = playerPos:copy()
         end
         shouldUpdate = true
     end
