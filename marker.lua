@@ -480,13 +480,16 @@ local function checkConditionsToRemoveForDynamicMarker(data, destroyMarker)
     return ret
 end
 
+
+
+
 local lastLocalMarkerPosX = 99999999
 local lastLocalMarkerPosY = 99999999
 local lastPosX = 99999999
 local lastPosY = 99999999
 local lastCellInteriorFlag = nil
 local axisAngle = 0
-local isSmallMenu
+local isSmallMiniMapMenu
 
 function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
     if not this.localMap then return end
@@ -501,11 +504,11 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
     recreateMarkers = recreateMarkers or false
 
     if menu.visible then
-        if isSmallMenu ~= false then
+        if isSmallMiniMapMenu ~= false then
             recreateMarkers = true
             shouldUpdate = true
         end
-        isSmallMenu = false
+        isSmallMiniMapMenu = false
         local localMap = menu:findChild("MenuMap_local")
         if not localMap then return end
         localPane = localMap:findChild("MenuMap_pane")
@@ -513,11 +516,11 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
         playerMarker = localPane:findChild("MenuMap_local_player")
         if not playerMarker then return end
     else
-        if isSmallMenu ~= true then
+        if isSmallMiniMapMenu ~= true then
             recreateMarkers = true
             shouldUpdate = true
         end
-        isSmallMenu = true
+        isSmallMiniMapMenu = true
         menu = tes3ui.findMenu("MenuMulti")
         if not menu then return end
         local localMap = menu:findChild("MenuMap_panel")
@@ -1071,7 +1074,7 @@ function this.reset()
     lastPosY = 99999999
     lastCellInteriorFlag = nil
     axisAngle = 0
-    isSmallMenu = nil
+    isSmallMiniMapMenu = nil
 
     storageData = nil
     this.localMap = nil
