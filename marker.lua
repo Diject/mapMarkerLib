@@ -489,6 +489,8 @@ local axisAngle = 0
 local isSmallMenu
 
 function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
+    if not this.localMap then return end
+
     local menu = tes3ui.findMenu("MenuMap")
     if not menu then return end
 
