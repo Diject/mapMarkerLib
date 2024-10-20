@@ -305,7 +305,7 @@ local function drawMarker(pane, x, y, record)
 
     local image = pane:createImage{id = markerLabelId, path = record.path}
 
-    image:setLuaData("iamgeRecordId", record.id)
+    image:setLuaData("imageRecordId", record.id)
 
     image.autoHeight = true
     image.autoWidth = true
@@ -398,10 +398,10 @@ local function changeMarker(markerEl, x, y, record)
 
     if not rec then return end
 
-    local imageRecId = markerEl:getLuaData("iamgeRecordId")
+    local imageRecId = markerEl:getLuaData("imageRecordId")
     if imageRecId ~= rec.id then
         markerEl.texture = niSourceTexture.createFromPath(rec.path)
-        markerEl:setLuaData("iamgeRecordId", rec.id)
+        markerEl:setLuaData("imageRecordId", rec.id)
 
         markerEl.imageScaleX = rec.scale or 1
         markerEl.imageScaleY = rec.scale or 1
