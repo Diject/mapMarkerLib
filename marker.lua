@@ -22,6 +22,7 @@ local allMapLabelName = "__all_map__"
 
 local this = {}
 
+this.updateInterval = 0.1
 this.lastLocalUpdate = 0
 
 local storageData
@@ -506,6 +507,14 @@ local isSmallMiniMapMenu
 function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
     if not this.localMap then return end
 
+    local timeStamp = os.clock()
+
+    if not (forceUpdate or recreateMarkers) and timeStamp - this.lastLocalUpdate < this.updateInterval then
+        return
+    end
+    log(timeStamp)
+    this.lastLocalUpdate = timeStamp
+
     local menu = tes3ui.findMenu("MenuMap")
     if not menu then return end
 
@@ -550,8 +559,6 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
 
     local playerPos = tes3.player.position
     local playerCell = tes3.player.cell
-
-    this.lastLocalUpdate = os.clock()
 
     if math.abs(playerMarker.positionX - lastLocalMarkerPosX) > 500 or math.abs(playerMarker.positionY - lastLocalMarkerPosY) > 500 then
         shouldUpdate = true
