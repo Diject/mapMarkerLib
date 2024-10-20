@@ -512,7 +512,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
     if not (forceUpdate or recreateMarkers) and timeStamp - this.lastLocalUpdate < this.updateInterval then
         return
     end
-    log(timeStamp)
+
     this.lastLocalUpdate = timeStamp
 
     local menu = tes3ui.findMenu("MenuMap")
