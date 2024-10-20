@@ -252,7 +252,7 @@ function this.addRecord(id, params)
     record.temporary = params.temporary
     record.color = params.color
     record.scale = params.scale
-    record.priority = params.priority
+    record.priority = params.priority or 0
 
     if not id then
         id = getId()
