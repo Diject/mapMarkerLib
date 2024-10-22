@@ -37,7 +37,13 @@ event.register(tes3.event.uiActivated, menuMapActivated, {filter = "MenuMap"})
 --- @param e simulatedEventData
 local function simulatedCallback(e)
     if markerLib.hasDynamicMarkers and os.clock() - markerLib.lastLocalUpdate > markerLib.updateInterval then
-        markerLib.drawLocaLMarkers(false, true)
+        local menu = tes3ui.findMenu("MenuMap")
+        if not menu then
+            markerLib.lastLocalUpdate = os.clock()
+            return
+        end
+        menu:updateLayout()
+        -- markerLib.drawLocaLMarkers(false, true)
     end
 end
 event.register(tes3.event.simulated, simulatedCallback)

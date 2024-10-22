@@ -25,6 +25,8 @@ local this = {}
 this.updateInterval = 0.1
 this.lastLocalUpdate = 0
 
+this.zDifference = 256
+
 local storageData
 
 ---@type table<string, table<string, markerLib.markerData>>
@@ -69,6 +71,8 @@ this.hasDynamicMarkers = false
 ---@class markerLib.markerRecord
 ---@field id string|nil
 ---@field path string texture path relative to Data Files\Textures
+---@field pathUp string|nil texture path relative to Data Files\Textures
+---@field pathDown string|nil texture path relative to Data Files\Textures
 ---@field width integer|nil texture width
 ---@field height integer|nil texture height
 ---@field textureShiftX integer|nil
@@ -238,10 +242,22 @@ function this.addRecord(id, params)
 
     local texturePath = "textures\\"..params.path
     local texture = tes3.loadSourceTexture(params.path)
+    if not texture then return end
+
     ---@type markerLib.markerRecord
     local record = {path = texturePath}
 
-    if not texture then return end
+    if params.pathUp then
+        texture = tes3.loadSourceTexture(params.pathUp)
+        if not texture then return end
+        record.pathUp = "textures\\"..params.pathUp
+    end
+    if params.pathDown then
+        texture = tes3.loadSourceTexture(params.pathDown)
+        if not texture then return end
+        record.pathDown = "textures\\"..params.pathDown
+    end
+
     record.width = texture.width
     record.height = texture.height
 
@@ -298,8 +314,9 @@ end
 
 ---@param pane tes3uiElement
 ---@param record markerLib.markerRecord
+---@param position table<string>|tes3vector3|nil position of the tracked object
 ---@return tes3uiElement|nil
-local function drawMarker(pane, x, y, record)
+local function drawMarker(pane, x, y, record, position)
     if not pane or not record then return end
 
     if pane.width < x or x < 0 or pane.height < -y or y > 0 then return end
@@ -307,6 +324,9 @@ local function drawMarker(pane, x, y, record)
     local image = pane:createImage{id = markerLabelId, path = record.path}
 
     image:setLuaData("imageRecordId", record.id)
+    if position then
+        image:setLuaData("position", position)
+    end
 
     image.autoHeight = true
     image.autoWidth = true
@@ -392,27 +412,52 @@ end
 
 ---@param markerEl tes3uiElement
 ---@param record markerLib.markerRecord|nil
----@return tes3uiElement|nil
+---@return boolean|nil
 local function changeMarker(markerEl, x, y, record)
     ---@type markerLib.markerRecord
     local rec = getMaxPriorityRecord(markerEl) or record
 
     if not rec then return end
+    local ret = false
 
     local imageRecId = markerEl:getLuaData("imageRecordId")
-    if imageRecId ~= rec.id then
-        markerEl.texture = niSourceTexture.createFromPath(rec.path)
+    local position = markerEl:getLuaData("position")
+    local shouldUpdateImage = imageRecId ~= rec.id
+    local imageType
+    if position then
+        local playerPosZ = tes3.player.position.z
+        local markerImageType = markerEl:getLuaData("imageType")
+        local posDiff = position.z - playerPosZ
+        imageType = (posDiff > this.zDifference) and "pathUp" or ((posDiff < -this.zDifference) and "pathDown" or "path")
+        shouldUpdateImage = shouldUpdateImage or (markerImageType ~= imageType)
+    else
+        imageType = "path"
+    end
+
+    if shouldUpdateImage then
+        local path = rec[imageType]
+        if not path then
+            path = rec.path
+        end
+
+        markerEl.contentPath = path
+
         markerEl:setLuaData("imageRecordId", rec.id)
+        markerEl:setLuaData("imageType", imageType)
 
         markerEl.imageScaleX = rec.scale or 1
         markerEl.imageScaleY = rec.scale or 1
         markerEl.color = rec.color or {1, 1, 1}
+        ret = ret or true
     end
 
     if x and y then
         markerEl.positionX = x + (rec.textureShiftX or -rec.width / 2)
         markerEl.positionY = y + (rec.textureShiftY or rec.height / 2)
+        ret = ret or true
     end
+
+    return ret
 end
 
 local function isMarkerPositionChanged(markerEl, x, y)
@@ -635,13 +680,21 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
 
             local position = data.trackedRef:getObject().position
 
-            if not shouldUpdate and math.isclose(data.x, position.x, 1) and math.isclose(data.y, position.y, 1) and math.isclose(data.z, position.z, 1) then
+            if not shouldUpdate and math.isclose(data.x, position.x, 8) and math.isclose(data.y, position.y, 8) and math.isclose(data.z, position.z, 8) then
                 goto continue
+            end
+
+            local zPosImageShouldBeChaned = false
+            if math.floor((data.z - playerPos.z) / this.zDifference) ~= math.floor((position.z - playerPos.z) / this.zDifference) then
+                zPosImageShouldBeChaned = true
             end
 
             data.x = position.x
             data.y = position.y
             data.z = position.z
+
+            local posX
+            local posY
 
             if playerCell.isInterior then
                 local xShift = (data.x - playerPos.x)
@@ -650,19 +703,20 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
                 local posXNorm = xShift * math.cos(axisAngle) + yShift * math.sin(axisAngle)
                 local posYNorm = yShift * math.cos(axisAngle) - xShift * math.sin(axisAngle)
 
-                local posX = playerMarkerX + posXNorm / widthPerPix
-                local posY = playerMarkerY - posYNorm / heightPerPix
-
-                if isMarkerPositionChanged(data.marker, posX, posY) then
-                    changeMarker(data.marker, posX, posY)
-                end
+                posX = playerMarkerX + posXNorm / widthPerPix
+                posY = playerMarkerY - posYNorm / heightPerPix
             else
-                local posX = (offsetX + 1 + math.floor(data.x / 8192) - math.floor(playerPos.x / 8192) + (data.x % 8192) / 8192) * tileWidth
-                local posY = -(-offsetY + 2 - (math.floor(data.y / 8192) - math.floor(playerPos.y / 8192) + (data.y % 8192) / 8192)) * tileHeight
+                posX = (offsetX + 1 + math.floor(data.x / 8192) - math.floor(playerPos.x / 8192) + (data.x % 8192) / 8192) * tileWidth
+                posY = -(-offsetY + 2 - (math.floor(data.y / 8192) - math.floor(playerPos.y / 8192) + (data.y % 8192) / 8192)) * tileHeight
+            end
 
-                if isMarkerPositionChanged(data.marker, posX, posY) then
-                    changeMarker(data.marker, posX, posY)
-                end
+            if not isMarkerPositionChanged(data.marker, posX, posY) then
+                posX = nil
+                posY = nil
+            end
+
+            if posX or zPosImageShouldBeChaned then
+                changeMarker(data.marker, posX, posY)
             end
 
             ::continue::
@@ -729,7 +783,8 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
             local markerRecord = getMaxPriorityRecordFromTable(data.id)
             if not markerRecord then goto continue end
 
-            placeMarkerFunc(markerRecord, data.markerId, data, false)
+            local marker = placeMarkerFunc(markerRecord, data.markerId, data, false)
+            if marker then marker:setLuaData("position", position) end
 
             ::continue::
         end
@@ -741,7 +796,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
         local sY = -2
         local eY = 2
 
-        local allowedError = 8
+        local allowedError = 3
 
         local function placeMarker(markerRecord, markerId, markerData, combine)
             local posX = (offsetX + 1 + math.floor(markerData.x / 8192) - math.floor(playerPos.x / 8192) + (markerData.x % 8192) / 8192) * tileWidth
@@ -754,7 +809,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
             childrens[markerId] = nil
 
             if foundEl then
-                if math.abs(foundEl.positionX - posX) > allowedError or math.abs(foundEl.positionY - posY) > allowedError then
+                if not math.isclose(foundEl.positionX, posX, allowedError) or not math.isclose(foundEl.positionY, posY, allowedError) then
                     changeMarker(foundEl, posX, posY, markerRecord)
                 end
                 if combine then
@@ -773,7 +828,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
                 end
                 marker:setLuaData("ids", ids)
             else
-                marker = drawMarker(localPane, posX, posY, markerRecord)
+                marker = drawMarker(localPane, posX, posY, markerRecord, {z = markerData.z})
                 if marker then
                     marker:setLuaData("ids", {markerId})
                     markerMap[markerMapId] = marker
@@ -781,6 +836,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
             end
 
             markerData.marker = marker
+            return marker
         end
 
         for i = sX, eX do
@@ -817,7 +873,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
     else -- for interior cells
 
         local cellData = this.getCellData(playerCell.editorName)
-        local allowedError = 8
+        local allowedError = 3
 
         local function placeMarker(markerRecord, markerId, markerData, combine)
             local xShift = (markerData.x - playerPos.x)
@@ -836,7 +892,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
             childrens[markerId] = nil
 
             if foundEl then
-                if math.abs(foundEl.positionX - posX) > allowedError or math.abs(foundEl.positionY - posY) > allowedError then
+                if not math.isclose(foundEl.positionX, posX, allowedError) or not math.isclose(foundEl.positionY, posY, allowedError) then
                     changeMarker(foundEl, posX, posY, markerRecord)
                 end
                 if combine then
@@ -855,7 +911,7 @@ function this.drawLocaLMarkers(forceUpdate, updateMenu, recreateMarkers)
                 end
                 marker:setLuaData("ids", ids)
             else
-                marker = drawMarker(localPane, posX, posY, markerRecord)
+                marker = drawMarker(localPane, posX, posY, markerRecord, {z = markerData.z})
                 if marker then
                     marker:setLuaData("ids", {markerId})
                     markerMap[markerMapId] = marker
