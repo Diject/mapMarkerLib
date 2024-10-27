@@ -106,8 +106,8 @@ this.world = nil
 ---@class markerLib.markerRecord
 ---@field id string|nil
 ---@field path string texture path relative to Data Files\Textures
----@field pathUp string|nil texture path relative to Data Files\Textures
----@field pathDown string|nil texture path relative to Data Files\Textures
+---@field pathAbove string|nil texture path relative to Data Files\Textures
+---@field pathBelow string|nil texture path relative to Data Files\Textures
 ---@field width integer|nil texture width
 ---@field height integer|nil texture height
 ---@field textureShiftX integer|nil
@@ -278,15 +278,15 @@ function this.addRecord(id, params)
     ---@type markerLib.markerRecord
     local record = {path = texturePath}
 
-    if params.pathUp then
-        texture = tes3.loadSourceTexture(params.pathUp)
+    if params.pathAbove then
+        texture = tes3.loadSourceTexture(params.pathAbove)
         if not texture then return end
-        record.pathUp = "textures\\"..params.pathUp
+        record.pathAbove = "textures\\"..params.pathAbove
     end
-    if params.pathDown then
-        texture = tes3.loadSourceTexture(params.pathDown)
+    if params.pathBelow then
+        texture = tes3.loadSourceTexture(params.pathBelow)
         if not texture then return end
-        record.pathDown = "textures\\"..params.pathDown
+        record.pathBelow = "textures\\"..params.pathBelow
     end
 
     record.width = texture.width
@@ -356,10 +356,10 @@ local function drawMarker(pane, x, y, record, position)
     if pane.width < x or x < 0 or pane.height < -y or y > 0 then return end
 
     local path
-    if position and (record.pathDown or record.pathUp) then
+    if position and (record.pathBelow or record.pathAbove) then
         local playerPosZ = tes3.player.position.z
         local posDiff = position.z - playerPosZ
-        local imageType = (posDiff > this.zDifference) and "pathUp" or ((posDiff < -this.zDifference) and "pathDown" or "path")
+        local imageType = (posDiff > this.zDifference) and "pathAbove" or ((posDiff < -this.zDifference) and "pathBelow" or "path")
         path = record[imageType]
     end
     if not path then
@@ -485,7 +485,7 @@ local function changeMarker(markerEl, x, y, updateImage)
     if position and position.z then
         local playerPosZ = tes3.player.position.z
         local posDiff = position.z - playerPosZ
-        imageType = (posDiff > this.zDifference) and "pathUp" or ((posDiff < -this.zDifference) and "pathDown" or "path")
+        imageType = (posDiff > this.zDifference) and "pathAbove" or ((posDiff < -this.zDifference) and "pathBelow" or "path")
     else
         imageType = "path"
     end
