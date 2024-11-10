@@ -62,6 +62,7 @@ local storageData
 ---@field ref mwseSafeObjectHandle|nil
 ---@field objectId string|nil
 ---@field position tes3vector3|{x : number, y : number, z : number|nil} last position when the marker was redrawn
+---@field lastZDiff number|nil difference in z coordinate between player and the object
 ---@field cell tes3cell|nil
 ---@field shouldUpdate boolean|nil
 
@@ -730,6 +731,7 @@ function this.createLocalMarkers()
                         ref = data.trackedRef or tes3.makeSafeObjectHandle(ref),
                         objectId = data.objectId,
                         position = pos,
+                        lastZDiff = math.abs(pos.z - playerPos.z),
                     }
                     local markerContainer = this.activeLocalMarkers[ref]
                     markerContainer.items[data.recordId] = {
@@ -797,6 +799,7 @@ function this.createLocalMarkers()
                         marker = marker,
                         items = {},
                         position = pos,
+                        lastZDiff = math.abs(pos.z - playerPos.z),
                         cell = tes3.getCell{id = data.cellName, position = pos},
                         conditionFunc = data.conditionFunc,
                         itemId = data.itemId,
@@ -821,7 +824,6 @@ function this.createLocalMarkers()
 end
 
 
-local updateMarkers_lastPlayerZPos = -999999
 function this.updateLocalMarkers(force)
 
     this.lastLocalUpdate = os.clock()
@@ -879,7 +881,7 @@ function this.updateLocalMarkers(force)
             if not math.isclose(data.position.x, refPos.x, positionDifferenceToUpdate) or
                     not math.isclose(data.position.y, refPos.y, positionDifferenceToUpdate) then
                 shouldUpdate = true
-            elseif math.floor(math.abs(data.position.z - playerPos.z) / this.zDifference) ~=
+            elseif not data.lastZDiff or math.floor(data.lastZDiff / this.zDifference) ~=
                     math.floor(math.abs(refPos.z - playerPos.z) / this.zDifference) then
                 shouldUpdate = true
             end
@@ -891,6 +893,7 @@ function this.updateLocalMarkers(force)
             data.position.x = refPos.x
             data.position.y = refPos.y
             data.position.z = refPos.z
+            data.lastZDiff = math.abs(data.position.z - playerPos.z)
 
             markersToUpdate[data.marker] = data.position
 
@@ -915,14 +918,16 @@ function this.updateLocalMarkers(force)
                 goto continue
             end
 
-            if math.floor(math.abs(data.position.z - playerPos.z) / this.zDifference) ~=
-                    math.floor(math.abs(data.position.z - updateMarkers_lastPlayerZPos) / this.zDifference) then
+            if not data.lastZDiff or math.floor(data.lastZDiff / this.zDifference) ~=
+                    math.floor(math.abs(data.position.z - playerPos.z) / this.zDifference) then
                 shouldUpdate = true
             end
 
             ::action::
 
             if not shouldUpdate then goto continue end
+
+            data.lastZDiff = math.abs(data.position.z - playerPos.z)
 
             markersToUpdate[data.marker] = data.position
 
@@ -980,8 +985,6 @@ function this.updateLocalMarkers(force)
 
         changeMarker(marker, posX, posY, force)
     end
-
-    updateMarkers_lastPlayerZPos = playerPos.z
 end
 
 
