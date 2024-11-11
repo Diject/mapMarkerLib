@@ -560,7 +560,11 @@ local function getMenuLayout()
         if not localPane then return end
         playerMarker = localPane:findChild("MenuMap_local_player")
         if not playerMarker then return end
-        this.activeMenu = "MenuMap"
+        if localMap.visible then
+            this.activeMenu = "MenuMapLocal"
+        else
+            this.activeMenu = "MenuMapWorld"
+        end
     else
         menu = tes3ui.findMenu("MenuMulti")
         if not menu then return end
@@ -604,35 +608,33 @@ end
 
 
 local axisAngle = 0
-local lastCell
+local lastCell = nil
+local lastActiveMenu = nil
 ---@type table<string, markerLib.markerContainer>
 local localMarkerPositionMap = {}
 
 function this.createLocalMarkers()
-    local lastActiveMenu = this.activeMenu
     local localPane, playerMarker = getMenuLayout()
-
-    if lastActiveMenu ~= this.activeMenu then
-        this.reregisterLocal()
-    end
-
-    if table.size(this.waitingToCreate_local) == 0 then return end
-
-    local timeStamp = os.clock()
-
-    this.lastLocalUpdate = timeStamp
-
-    if not localPane or not playerMarker then return end
 
     local player = tes3.player
     local playerPos = player.position
     local playerCell = player.cell
 
+    if this.activeMenu ~= lastActiveMenu or ((lastCell or {}).isInterior ~= playerCell.isInterior) then
+        lastActiveMenu = this.activeMenu
+        this.reregisterLocal()
+    end
+
+    if table.size(this.waitingToCreate_local) == 0 then return end
+
+    if not localPane or not playerMarker then return end
 
     if lastCell ~= playerCell then
-        local nMarker = tes3.getReference("NorthMarker")
-        if nMarker then
-            axisAngle = nMarker.orientation.z
+        if playerCell.isInterior then
+            local nMarker = tes3.getReference("NorthMarker")
+            if nMarker then
+                axisAngle = nMarker.orientation.z
+            end
         end
         lastCell = playerCell
     end
@@ -994,6 +996,7 @@ local lastWorldPaneHeight = 0
 local worldMarkerPositionMap = {}
 
 function this.createWorldMarkers()
+    lastActiveMenu = this.activeMenu
     if table.size(this.waitingToCreate_world) == 0 then return end
 
     local menu = tes3ui.findMenu("MenuMap")
@@ -1192,6 +1195,10 @@ end
 
 
 function this.reset()
+    lastCell = nil
+    lastActiveMenu = nil
+    lastWorldPaneWidth = 0
+    lastWorldPaneHeight = 0
     storageData = nil
     this.activeMenu = nil
 

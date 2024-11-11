@@ -45,9 +45,11 @@ local function menuMapActivated(e)
 
     e.element:getTopLevelMenu():register(tes3.uiEvent.preUpdate, function (e1)
         if localMap.visible then
+            markerLib.activeMenu = "MenuMapLocal"
             markerLib.createLocalMarkers()
             markerLib.updateLocalMarkers()
         elseif worldMap.visible then
+            markerLib.activeMenu = "MenuMapWorld"
             markerLib.createWorldMarkers()
             markerLib.updateWorldMarkers()
         end
@@ -70,8 +72,10 @@ local function simulatedCallback(e)
         if menu.visible then
             menu:updateLayout()
         else
+            markerLib.activeMenu = "MenuMulti"
             markerLib.createLocalMarkers()
             markerLib.updateLocalMarkers()
+            markerLib.removeDeletedMarkers()
         end
     end
 end
