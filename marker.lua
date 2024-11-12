@@ -899,6 +899,8 @@ function this.createLocalMarkers()
     table.clear(this.waitingToCreate_local)
 end
 
+local lastLocalPaneWidth
+local lastLocalPaneHeight
 
 function this.updateLocalMarkers(force)
 
@@ -907,6 +909,16 @@ function this.updateLocalMarkers(force)
     local player = tes3.player
     local playerPos = player.position
     local playerCell = player.cell
+
+    local localPane, playerMarker = getLocalMenuLayout()
+
+    if not localPane or not playerMarker then return end
+
+    if lastLocalPaneWidth ~= localPane.width or lastLocalPaneHeight ~= localPane.height then
+        force = true
+        lastLocalPaneWidth = localPane.width
+        lastLocalPaneHeight = localPane.height
+    end
 
     ---@type table<tes3uiElement, tes3vector3>
     local markersToUpdate = {}
@@ -1015,10 +1027,6 @@ function this.updateLocalMarkers(force)
     end
 
     if table.size(markersToUpdate) == 0 then return end
-
-    local localPane, playerMarker = getLocalMenuLayout()
-
-    if not localPane or not playerMarker then return end
 
     local tileHeight
     local tileWidth
@@ -1276,6 +1284,8 @@ function this.reset()
     lastActiveMenu = nil
     lastWorldPaneWidth = 0
     lastWorldPaneHeight = 0
+    lastLocalPaneWidth = 0
+    lastLocalPaneHeight = 0
     storageData = nil
     this.activeMenu = nil
 
