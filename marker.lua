@@ -680,6 +680,8 @@ end
 
 
 local axisAngle = 0
+local axisAngleSin = 0
+local axisAngleCos = 0
 local lastCell = nil
 local lastActiveMenu = nil
 ---@type table<string, markerLib.markerContainer>
@@ -706,6 +708,8 @@ function this.createLocalMarkers()
             local nMarker = tes3.getReference("NorthMarker")
             if nMarker then
                 axisAngle = nMarker.orientation.z
+                axisAngleCos = math.cos(axisAngle)
+                axisAngleSin = math.sin(axisAngle)
             end
         end
         lastCell = playerCell
@@ -745,8 +749,8 @@ function this.createLocalMarkers()
         local xShift = (position.x - playerPos.x)
         local yShift = (playerPos.y - position.y)
 
-        local posXNorm = xShift * math.cos(axisAngle) + yShift * math.sin(axisAngle)
-        local posYNorm = yShift * math.cos(axisAngle) - xShift * math.sin(axisAngle)
+        local posXNorm = xShift * axisAngleCos + yShift * axisAngleSin
+        local posYNorm = yShift * axisAngleCos - xShift * axisAngleSin
 
         local posX = playerMarkerX + posXNorm / widthPerPix
         local posY = playerMarkerY - posYNorm / heightPerPix
@@ -1057,8 +1061,8 @@ function this.updateLocalMarkers(force)
             local xShift = (pos.x - playerPos.x)
             local yShift = (playerPos.y - pos.y)
 
-            local posXNorm = xShift * math.cos(axisAngle) + yShift * math.sin(axisAngle)
-            local posYNorm = yShift * math.cos(axisAngle) - xShift * math.sin(axisAngle)
+            local posXNorm = xShift * axisAngleCos + yShift * axisAngleSin
+            local posYNorm = yShift * axisAngleCos - xShift * axisAngleSin
 
             posX = playerMarkerX + posXNorm / widthPerPix
             posY = playerMarkerY - posYNorm / heightPerPix
