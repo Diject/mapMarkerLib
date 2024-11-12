@@ -149,8 +149,18 @@ function this.isReady()
     return true
 end
 
-local function getExCellName(x, y)
+local function getExCellNameByCoord(x, y)
     return string.format("%d, %d", math.floor(x / 8192), math.floor(y / 8192))
+end
+
+local function getExCellNameByGrid(gridX, gridY)
+    return string.format("%d, %d", gridX, gridY)
+end
+
+local function getCellEditorName(x, y)
+    local cell = tes3.getCell{ x = x / 8192, y = y / 8192 }
+    if not cell then return "" end
+    return cell.editorName
 end
 
 
@@ -172,7 +182,7 @@ function this.addLocal(params)
 
     local cellName
     if (params.position and params.position.x and params.position.y) or params.cellName then
-        cellName = params.cellName or getExCellName(params.position.x, params.position.y)
+        cellName = params.cellName or getExCellNameByCoord(params.position.x, params.position.y)
     else
         cellName = allMapLabelName
     end
@@ -591,9 +601,9 @@ end
 local function isMarkerValidToCreate(data)
     if data.cellName and activeCells.isCellActiveByName(data.cellName) then
         return true
-    elseif data.trackedRef and data.trackedRef:valid() and activeCells.isCellActiveByName(data.trackedRef:getObject().cell.editorName) then
+    elseif data.trackedRef and data.trackedRef:valid() and activeCells.isCellActiveByName(data.trackedRef:getObject().cell.editorName:lower()) then
         return true
-    elseif data.position and activeCells.isCellActiveByName(getExCellName(data.position.x, data.position.y)) then
+    elseif data.position and activeCells.isCellActiveByName(getCellEditorName(data.position.x, data.position.y):lower()) then
         return true
     end
     return true
@@ -642,7 +652,7 @@ function this.createLocalMarkers()
     table.clear(localMarkerPositionMap)
     for id, data in pairs(this.activeLocalMarkers) do
         local pos = data.position
-        if pos then
+        if not data.ref and not data.objectId and pos then
             local mapId = tostring(math.floor(pos.x / 48))..","..tostring(math.floor(pos.y / 48))
             localMarkerPositionMap[mapId] = data
         end
@@ -769,7 +779,8 @@ function this.createLocalMarkers()
         elseif data.position then -- for static markers
 
             local position = data.position
-            local parentData = localMarkerPositionMap[tostring(math.floor(position.x / 48))..","..tostring(math.floor(position.y / 48))]
+            local posMapId = tostring(math.floor(position.x / 48))..","..tostring(math.floor(position.y / 48))
+            local parentData = localMarkerPositionMap[posMapId]
 
             if parentData and parentData.marker then
                 if parentData.items[data.recordId] then
@@ -807,6 +818,7 @@ function this.createLocalMarkers()
                         itemId = data.itemId,
                     }
                     local markerContainer = this.activeLocalMarkers[id]
+                    localMarkerPositionMap[posMapId] = markerContainer
                     markerContainer.items[data.recordId] = {
                         id = data.id,
                         record = record,
@@ -1137,13 +1149,21 @@ function this.removeDeletedMarkers()
     table.clear(this.markerElementsToDelete)
 end
 
----@param cellEditorName string|nil
-function this.registerMarkersForCell(cellEditorName)
+---@param cell tes3cell|nil
+function this.registerMarkersForCell(cell)
     if not this.localMap then return end
+    local label
+    if not cell then
+        label = allMapLabelName
+    else
+        if cell.isInterior then
+            label = cell.name:lower()
+        else
+            label = getExCellNameByGrid(cell.gridX, cell.gridY)
+        end
+    end
 
-    if not cellEditorName then cellEditorName = allMapLabelName end
-
-    for id, data in pairs(this.localMap[cellEditorName] or {}) do
+    for id, data in pairs(this.localMap[label] or {}) do
         this.addLocalMarkerFromMarkerData(data)
     end
 end

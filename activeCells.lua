@@ -6,7 +6,7 @@ this.validCellNames = {}
 ---@param cell tes3cell
 ---@return boolean
 function this.isCellActive(cell)
-    return this.validCellNames[cell.editorName] or false
+    return this.validCellNames[cell.editorName:lower()] or false
 end
 
 ---@param cellName string
@@ -17,12 +17,12 @@ end
 
 ---@param cell tes3cell
 function this.registerCell(cell)
-    this.validCellNames[cell.editorName] = true
+    this.validCellNames[cell.editorName:lower()] = true
 end
 
 ---@param cell tes3cell
 function this.unregisterCell(cell)
-    this.validCellNames[cell.editorName] = nil
+    this.validCellNames[cell.editorName:lower()] = nil
 end
 
 return this

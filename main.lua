@@ -103,7 +103,7 @@ local function cellActivatedCallback(e)
         markerLib.init()
     end
     activeCells.registerCell(e.cell)
-    markerLib.registerMarkersForCell(e.cell.editorName)
+    markerLib.registerMarkersForCell(e.cell)
 end
 event.register(tes3.event.cellActivated, cellActivatedCallback)
 
