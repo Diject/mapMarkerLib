@@ -32,23 +32,16 @@ local function menuMapActivated(e)
     end
 
     local menu = e.element
-    local worldMap = menu:findChild("MenuMap_world")
-    if not worldMap then return end
-    local worldPane = worldMap:findChild("MenuMap_world_pane")
-    if not worldPane then return end
-    local localMap = menu:findChild("MenuMap_local")
-    if not localMap then return end
-    local localPane = localMap:findChild("MenuMap_pane")
-    if not localPane then return end
-    local playerMarker = localPane:findChild("MenuMap_local_player")
-    if not playerMarker then return end
+    markerLib.initMapMenuInfo(menu)
 
-    e.element:getTopLevelMenu():register(tes3.uiEvent.preUpdate, function (e1)
-        if localMap.visible then
+    menu:getTopLevelMenu():register(tes3.uiEvent.preUpdate, function (e1)
+        if not markerLib.isMapMenuInitialized then return end
+
+        if markerLib.menu.localMap.visible then
             markerLib.activeMenu = "MenuMapLocal"
             markerLib.createLocalMarkers()
             markerLib.updateLocalMarkers()
-        elseif worldMap.visible then
+        elseif markerLib.menu.worldMap.visible then
             markerLib.activeMenu = "MenuMapWorld"
             markerLib.createWorldMarkers()
             markerLib.updateWorldMarkers()
@@ -56,26 +49,38 @@ local function menuMapActivated(e)
         markerLib.removeDeletedMarkers()
     end)
 
-    e.element:updateLayout()
+    menu:updateLayout()
 end
 
 event.register(tes3.event.uiActivated, menuMapActivated, {filter = "MenuMap"})
 
+--- @param e uiActivatedEventData
+local function menuMultiActivated(e)
+    if not markerLib.isReady() then
+        markerLib.init()
+        markerLib.registerWorld()
+    end
+
+    local menu = e.element
+    markerLib.initMultiMenuInfo(menu)
+end
+
+event.register(tes3.event.uiActivated, menuMultiActivated, {filter = "MenuMulti"})
+
 --- @param e simulatedEventData
 local function simulatedCallback(e)
     if os.clock() - markerLib.lastLocalUpdate > markerLib.updateInterval then
-        local menu = tes3ui.findMenu("MenuMap")
-        if not menu then
-            markerLib.lastLocalUpdate = os.clock()
-            return
-        end
-        if menu.visible then
-            menu:updateLayout()
-        else
+        local menuMap = markerLib.menu.menuMap
+        if markerLib.isMapMenuInitialized and menuMap.visible then ---@diagnostic disable-line: need-check-nil
+            menuMap:updateLayout() ---@diagnostic disable-line: need-check-nil
+        elseif markerLib.isMultiMenuInitialized then
             markerLib.activeMenu = "MenuMulti"
             markerLib.createLocalMarkers()
             markerLib.updateLocalMarkers()
             markerLib.removeDeletedMarkers()
+        else
+            markerLib.lastLocalUpdate = os.clock()
+            return
         end
     end
 end

@@ -144,6 +144,80 @@ function this.init()
     end
 end
 
+---@class markerLib.menus
+---@field menuMap tes3uiElement?
+---@field localMap tes3uiElement?
+---@field localPane tes3uiElement?
+---@field localPlayerMarker tes3uiElement?
+---@field worldMap tes3uiElement?
+---@field worldPane tes3uiElement?
+---@field multiMap tes3uiElement?
+---@field multiPane tes3uiElement?
+---@field multiPlayerMarker tes3uiElement?
+---@field multiMapLayout tes3uiElement?
+
+---@type markerLib.menus
+this.menu = {}
+this.isMapMenuInitialized = false
+this.isMultiMenuInitialized = false
+
+---@param menu tes3uiElement
+function this.initMapMenuInfo(menu)
+    this.isMapMenuInitialized = false
+    if not menu then return end
+
+    local menuData = this.menu
+
+    menuData.menuMap = menu
+
+    menuData.localMap = menu:findChild("MenuMap_local")
+    if not menuData.localMap then return end
+    menuData.localPane = menuData.localMap:findChild("MenuMap_pane")
+    if not menuData.localPane then return end
+    menuData.localPlayerMarker = menuData.localPane:findChild("MenuMap_local_player")
+    if not menuData.localPlayerMarker then return end
+
+    menuData.worldMap = menu:findChild("MenuMap_world")
+    if not menuData.worldMap then return end
+    menuData.worldPane = menuData.worldMap:findChild("MenuMap_world_pane")
+    if not menuData.worldPane then return end
+
+    if menu.visible then
+        if menuData.localMap.visible then
+            this.activeMenu = "MenuMapLocal"
+        elseif menuData.worldMap.visible then
+            this.activeMenu = "MenuMapWorld"
+        end
+    end
+
+    this.isMapMenuInitialized = true
+    return this.isMapMenuInitialized
+end
+
+---@param menu tes3uiElement
+function this.initMultiMenuInfo(menu)
+    this.isMultiMenuInitialized = false
+    if not menu then return end
+
+    local menuData = this.menu
+
+    menuData.multiMap = menu:findChild("MenuMap_panel")
+    if not menuData.multiMap then return end
+    menuData.multiPane = menuData.multiMap:findChild("MenuMap_pane")
+    if not menuData.multiPane then return end
+    menuData.multiMapLayout = menuData.multiMap:findChild("MenuMap_layout")
+    if not menuData.multiMapLayout then return end
+    menuData.multiPlayerMarker = menuData.multiMap:findChild("MenuMap_local_player")
+    if not menuData.multiPlayerMarker then return end
+
+    if menuData.multiMap.visible then
+        this.activeMenu = "MenuMulti"
+    end
+
+    this.isMultiMenuInitialized = true
+    return this.isMultiMenuInitialized
+end
+
 function this.isReady()
     if not this.localMap or not this.records or not this.world then return false end
     return true
@@ -556,40 +630,28 @@ local function checkConditionsToRemoveMarkerElement(markerData, container)
 end
 
 
-local function getMenuLayout()
-    local menu = tes3ui.findMenu("MenuMap")
-    if not menu then return end
+local function getLocalMenuLayout()
+    local menuData = this.menu
+
+    if not this.isMapMenuInitialized and not this.isMultiMenuInitialized then return end
+
+    local menuMap = menuData.menuMap
+    local multiMenu = menuData.multiMap
 
     local localPane
     local playerMarker
 
-    if menu.visible then
-        local localMap = menu:findChild("MenuMap_local")
-        if not localMap then return end
-        localPane = localMap:findChild("MenuMap_pane")
-        if not localPane then return end
-        playerMarker = localPane:findChild("MenuMap_local_player")
-        if not playerMarker then return end
-        if localMap.visible then
-            this.activeMenu = "MenuMapLocal"
-        else
-            this.activeMenu = "MenuMapWorld"
-        end
-    else
-        menu = tes3ui.findMenu("MenuMulti")
-        if not menu then return end
-        local localMap = menu:findChild("MenuMap_panel")
-        if not localMap then return end
-        localPane = localMap:findChild("MenuMap_pane")
-        local mapLayout = localMap:findChild("MenuMap_layout")
-        if not mapLayout then return end
-        local plM = localMap:findChild("MenuMap_local_player")
-        if not plM then return end
+    if this.isMapMenuInitialized and menuMap.visible then ---@diagnostic disable-line: need-check-nil
+        localPane = menuData.localPane
+        playerMarker = menuData.localPlayerMarker
+    elseif this.isMultiMenuInitialized and multiMenu.visible then ---@diagnostic disable-line: need-check-nil
+        localPane = menuData.multiPane
+        local mapLayout = menuData.multiMapLayout
+        local plM = menuData.multiPlayerMarker
         playerMarker = {
-            positionX = -mapLayout.positionX + plM.positionX,
-            positionY = -mapLayout.positionY + plM.positionY,
+            positionX = -mapLayout.positionX + plM.positionX, ---@diagnostic disable-line: need-check-nil
+            positionY = -mapLayout.positionY + plM.positionY, ---@diagnostic disable-line: need-check-nil
         }
-        this.activeMenu = "MenuMulti"
     end
 
     return localPane, playerMarker
@@ -624,7 +686,7 @@ local lastActiveMenu = nil
 local localMarkerPositionMap = {}
 
 function this.createLocalMarkers()
-    local localPane, playerMarker = getMenuLayout()
+    local localPane, playerMarker = getLocalMenuLayout()
 
     local player = tes3.player
     local playerPos = player.position
@@ -954,7 +1016,7 @@ function this.updateLocalMarkers(force)
 
     if table.size(markersToUpdate) == 0 then return end
 
-    local localPane, playerMarker = getMenuLayout()
+    local localPane, playerMarker = getLocalMenuLayout()
 
     if not localPane or not playerMarker then return end
 
@@ -1011,15 +1073,10 @@ function this.createWorldMarkers()
     lastActiveMenu = this.activeMenu
     if table.size(this.waitingToCreate_world) == 0 then return end
 
-    local menu = tes3ui.findMenu("MenuMap")
-    if not menu then return end
-    local worldMap = menu:findChild("MenuMap_world")
-    if not worldMap then return end
-    local worldPane = worldMap:findChild("MenuMap_world_pane")
-    if not worldPane then return end
+    local worldPane = this.menu.worldPane
 
-    local widthPerPix = worldPane.width / worldWidth
-    local heightPerPix = worldPane.height / worldHeight
+    local widthPerPix = worldPane.width / worldWidth ---@diagnostic disable-line: need-check-nil
+    local heightPerPix = worldPane.height / worldHeight ---@diagnostic disable-line: need-check-nil
 
     table.clear(worldMarkerPositionMap)
     for id, data in pairs(this.activeWorldMarkers) do
@@ -1237,6 +1294,10 @@ function this.reset()
     this.waitingToCreate_world = {}
     this.markersToRemove = {}
     this.markerElementsToDelete = {}
+    this.menu = {}
+
+    this.isMapMenuInitialized = false
+    this.isMultiMenuInitialized = false
 
     this.localMap = nil
     this.records = nil
