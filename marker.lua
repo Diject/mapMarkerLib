@@ -438,8 +438,6 @@ local tempRecordList = {}
 local function drawMarker(pane, x, y, record, position)
     if not pane or not record then return end
 
-    if pane.width < x or x < 0 or pane.height < -y or y > 0 then return end
-
     local path
     if position and (record.pathBelow or record.pathAbove) then
         local playerPosZ = tes3.player.position.z
@@ -741,7 +739,7 @@ function this.createLocalMarkers()
     local playerMarkerTileX = math.floor(math.abs(playerMarker.positionX) / tileWidth)
     local playerMarkerTileY = math.floor(math.abs(playerMarker.positionY) / tileHeight)
 
-    local offsetX = 1 - playerMarkerTileX
+    local offsetX = playerMarkerTileX - 1
     local offsetY = 1 - playerMarkerTileY
 
     ---@return number, number
@@ -905,6 +903,8 @@ end
 
 local lastLocalPaneWidth
 local lastLocalPaneHeight
+local lastPlayerMarkerTileX
+local lastPlayerMarkerTileY
 
 function this.updateLocalMarkers(force)
 
@@ -922,6 +922,17 @@ function this.updateLocalMarkers(force)
         force = true
         lastLocalPaneWidth = localPane.width
         lastLocalPaneHeight = localPane.height
+    end
+
+    if not playerCell.isInterior then
+        local playerMarkerTileX = math.floor(3 * math.abs(playerMarker.positionX) / localPane.width)
+        local playerMarkerTileY = math.floor(3 * math.abs(playerMarker.positionY) / localPane.height)
+
+        if lastPlayerMarkerTileX ~= playerMarkerTileX or lastPlayerMarkerTileY ~= playerMarkerTileY then
+            lastPlayerMarkerTileX = playerMarkerTileX
+            lastPlayerMarkerTileY = playerMarkerTileY
+            force = true
+        end
     end
 
     ---@type table<tes3uiElement, tes3vector3>
@@ -1049,7 +1060,7 @@ function this.updateLocalMarkers(force)
     local playerMarkerTileX = math.floor(math.abs(playerMarker.positionX) / tileWidth)
     local playerMarkerTileY = math.floor(math.abs(playerMarker.positionY) / tileHeight)
 
-    local offsetX = 1 - playerMarkerTileX
+    local offsetX = playerMarkerTileX - 1
     local offsetY = 1 - playerMarkerTileY
 
     for marker, pos in pairs(markersToUpdate) do
@@ -1290,6 +1301,8 @@ function this.reset()
     lastWorldPaneHeight = 0
     lastLocalPaneWidth = 0
     lastLocalPaneHeight = 0
+    lastPlayerMarkerTileX = nil
+    lastPlayerMarkerTileY = nil
     storageData = nil
     this.activeMenu = nil
 
