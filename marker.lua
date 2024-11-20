@@ -803,11 +803,13 @@ function this.createLocalMarkers()
 
     if lastCell ~= playerCell then
         if playerCell.isInterior then
-            local nMarker = tes3.getReference("NorthMarker")
-            if nMarker then
-                axisAngle = nMarker.orientation.z
-            else
-                axisAngle = 0
+            for ref in playerCell:iterateReferences({tes3.objectType.static}) do
+                if ref.baseObject.id == "NorthMarker" then
+                    axisAngle = ref.orientation.z
+                    break
+                else
+                    axisAngle = 0
+                end
             end
             axisAngleCos = math.cos(axisAngle)
             axisAngleSin = math.sin(axisAngle)
