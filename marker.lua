@@ -117,6 +117,7 @@ this.world = nil
 ---@field recordId string recordId
 ---@field position tes3vector3|{x : number, y : number, z : number}
 ---@field id string
+---@field cellId string
 ---@field cellName string|nil should be nil if the cell is exterior
 ---@field objectId string|nil should be lowercase
 ---@field itemId string|nil should be lowercase
@@ -250,20 +251,11 @@ function this.isReady()
     return true
 end
 
-local function getExCellNameByCoord(x, y)
-    return string.format("%d, %d", math.floor(x / 8192), math.floor(y / 8192))
-end
-
-local function getExCellNameByGrid(gridX, gridY)
-    return string.format("%d, %d", gridX, gridY)
-end
-
 local function getCellEditorName(x, y)
     local cell = tes3.getCell{ x = x / 8192, y = y / 8192 }
     if not cell then return "" end
     return cell.editorName
 end
-
 
 
 ---@class markerLib.addLocalMarker.params
@@ -284,7 +276,7 @@ function this.addLocal(params)
 
     local cellName
     if (params.position and params.position.x and params.position.y) or params.cellName then
-        cellName = params.cellName or getExCellNameByCoord(params.position.x, params.position.y)
+        cellName = params.cellName or getCellEditorName(params.position.x, params.position.y)
     else
         cellName = allMapLabelName
     end
@@ -299,6 +291,9 @@ function this.addLocal(params)
         position = {x = position.x, y = position.y, z = position.z}
     end
 
+    local objectId = params.objectId
+    local reference = params.trackedRef
+
     local id = getId()
 
     ---@type markerLib.markerData
@@ -306,16 +301,17 @@ function this.addLocal(params)
         position = position,
         recordId = params.recordId,
         id = id,
-        objectId = params.objectId,
+        cellId = cellName,
+        objectId = objectId,
         itemId = params.itemId,
         temporary = params.temporary,
-        trackedRef = params.trackedRef and tes3.makeSafeObjectHandle(params.trackedRef),
+        trackedRef = reference and tes3.makeSafeObjectHandle(reference),
         conditionFunc = params.conditionFunc,
         offscreen = params.canBeOffscreen,
     }
     this.localMap[cellName][id] = data
 
-    -- log("added marker \"", id, "\" to \"", cellName, "\" cell", this.localMap[cellName][id])
+    log("local marker added, id:", id, "cell:", cellName, "recId:", params.recordId, "object:", position or objectId or reference)
 
     this.addLocalMarkerFromMarkerData(data)
 
@@ -782,6 +778,7 @@ local function removeMarker(id, markerElement)
     this.activeLocalMarkers[id] = nil
     this.waitingToCreate_world[id] = nil
     this.waitingToCreate_local[id] = nil
+    log("marker removed, id:", id)
 end
 
 
@@ -871,6 +868,7 @@ function this.createLocalMarkers()
         local record = this.records[data.recordId]
 
         if not record then
+            this.removeLocal(data.id, data.cellId)
             goto continue
         end
 
@@ -1227,7 +1225,10 @@ function this.createWorldMarkers()
     for markerId, data in pairs(this.waitingToCreate_world) do
         local record = this.records[data.recordId]
 
-        if not record then goto continue end
+        if not record then
+            this.removeWorld(data.id)
+            goto continue
+        end
 
         local pos = data.position
         local parentData = worldMarkerPositionMap[tostring(math.floor(pos.x / 48))..","..tostring(math.floor(pos.y / 48))]
@@ -1350,14 +1351,11 @@ function this.registerMarkersForCell(cell)
     if not cell then
         label = allMapLabelName
     else
-        if cell.isInterior then
-            label = cell.name:lower()
-        else
-            label = getExCellNameByGrid(cell.gridX, cell.gridY)
-        end
+        label = cell.editorName:lower()
     end
 
     for id, data in pairs(this.localMap[label] or {}) do
+        log("marker registered, id:", data.id, "cell:", label)
         this.addLocalMarkerFromMarkerData(data)
     end
 end
