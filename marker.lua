@@ -33,13 +33,32 @@ this.shouldAddWorld = false
 
 this.shouldUpdateWorld = false
 
-this.updateInterval = 0.1
+this.updateInterval = 0.05
 this.lastLocalUpdate = 0
 this.lastWorldUpdate = 0
 
 this.zDifference = 256
 
 local storageData
+
+local lastLocalPaneWidth
+local lastLocalPaneHeight
+local lastPlayerMarkerTileX
+local lastPlayerMarkerTileY
+
+local axisAngle = 0
+local axisAngleSin = 0
+local axisAngleCos = 0
+local lastCell = nil
+local lastActiveMenu = nil
+---@type table<string, markerLib.markerContainer>
+local localMarkerPositionMap = {}
+
+local lastWorldPaneWidth = 0
+local lastWorldPaneHeight = 0
+---@type table<string, markerLib.markerContainer>
+local worldMarkerPositionMap = {}
+
 
 ---@class markerLib.activeWorldMarkerContainer
 ---@field id string
@@ -64,6 +83,7 @@ local storageData
 ---@field position tes3vector3|{x : number, y : number, z : number|nil} last position when the marker was redrawn
 ---@field lastZDiff number|nil difference in z coordinate between player and the object
 ---@field cell tes3cell|nil
+---@field offscreen boolean|nil
 ---@field shouldUpdate boolean|nil
 
 ---@type table<string|tes3reference, markerLib.markerContainer> by id
@@ -97,12 +117,14 @@ this.world = nil
 ---@field recordId string recordId
 ---@field position tes3vector3|{x : number, y : number, z : number}
 ---@field id string
+---@field cellId string
 ---@field cellName string|nil should be nil if the cell is exterior
 ---@field objectId string|nil should be lowercase
 ---@field itemId string|nil should be lowercase
 ---@field conditionFunc (fun(data: markerLib.activeLocalMarkerElement):boolean)|nil
 ---@field temporary boolean|nil
 ---@field trackedRef mwseSafeObjectHandle|nil
+---@field offscreen boolean|nil
 
 ---@class markerLib.markerRecord
 ---@field id string|nil
@@ -147,11 +169,13 @@ end
 ---@class markerLib.menus
 ---@field menuMap tes3uiElement?
 ---@field localMap tes3uiElement?
+---@field localPanel tes3uiElement?
 ---@field localPane tes3uiElement?
 ---@field localPlayerMarker tes3uiElement?
 ---@field worldMap tes3uiElement?
 ---@field worldPane tes3uiElement?
 ---@field multiMap tes3uiElement?
+---@field multiPanel tes3uiElement?
 ---@field multiPane tes3uiElement?
 ---@field multiPlayerMarker tes3uiElement?
 ---@field multiMapLayout tes3uiElement?
@@ -172,7 +196,9 @@ function this.initMapMenuInfo(menu)
 
     menuData.localMap = menu:findChild("MenuMap_local")
     if not menuData.localMap then return end
-    menuData.localPane = menuData.localMap:findChild("MenuMap_pane")
+    menuData.localPanel = menuData.localMap:findChild("MenuMap_panel")
+    if not menuData.localPanel then return end
+    menuData.localPane = menuData.localPanel:findChild("MenuMap_pane")
     if not menuData.localPane then return end
     menuData.localPlayerMarker = menuData.localPane:findChild("MenuMap_local_player")
     if not menuData.localPlayerMarker then return end
@@ -203,7 +229,9 @@ function this.initMultiMenuInfo(menu)
 
     menuData.multiMap = menu:findChild("MenuMap_panel")
     if not menuData.multiMap then return end
-    menuData.multiPane = menuData.multiMap:findChild("MenuMap_pane")
+    menuData.multiPanel = menuData.multiMap:findChild("MenuMap_panel")
+    if not menuData.multiPanel then return end
+    menuData.multiPane = menuData.multiPanel:findChild("MenuMap_pane")
     if not menuData.multiPane then return end
     menuData.multiMapLayout = menuData.multiMap:findChild("MenuMap_layout")
     if not menuData.multiMapLayout then return end
@@ -223,20 +251,11 @@ function this.isReady()
     return true
 end
 
-local function getExCellNameByCoord(x, y)
-    return string.format("%d, %d", math.floor(x / 8192), math.floor(y / 8192))
-end
-
-local function getExCellNameByGrid(gridX, gridY)
-    return string.format("%d, %d", gridX, gridY)
-end
-
 local function getCellEditorName(x, y)
     local cell = tes3.getCell{ x = x / 8192, y = y / 8192 }
     if not cell then return "" end
     return cell.editorName
 end
-
 
 
 ---@class markerLib.addLocalMarker.params
@@ -248,6 +267,7 @@ end
 ---@field conditionFunc (fun(data: markerLib.activeLocalMarkerElement):boolean)|nil
 ---@field temporary boolean|nil
 ---@field trackedRef tes3reference|nil
+---@field canBeOffscreen boolean|nil
 
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
@@ -256,7 +276,7 @@ function this.addLocal(params)
 
     local cellName
     if (params.position and params.position.x and params.position.y) or params.cellName then
-        cellName = params.cellName or getExCellNameByCoord(params.position.x, params.position.y)
+        cellName = params.cellName or getCellEditorName(params.position.x, params.position.y)
     else
         cellName = allMapLabelName
     end
@@ -271,6 +291,9 @@ function this.addLocal(params)
         position = {x = position.x, y = position.y, z = position.z}
     end
 
+    local objectId = params.objectId
+    local reference = params.trackedRef
+
     local id = getId()
 
     ---@type markerLib.markerData
@@ -278,15 +301,17 @@ function this.addLocal(params)
         position = position,
         recordId = params.recordId,
         id = id,
-        objectId = params.objectId,
+        cellId = cellName,
+        objectId = objectId,
         itemId = params.itemId,
         temporary = params.temporary,
-        trackedRef = params.trackedRef and tes3.makeSafeObjectHandle(params.trackedRef),
-        conditionFunc = params.conditionFunc
+        trackedRef = reference and tes3.makeSafeObjectHandle(reference),
+        conditionFunc = params.conditionFunc,
+        offscreen = params.canBeOffscreen,
     }
     this.localMap[cellName][id] = data
 
-    log("added marker \"", id, "\" to \"", cellName, "\" cell", this.localMap[cellName][id])
+    log("local marker added, id:", id, "cell:", cellName, "recId:", params.recordId, "object:", position or objectId or reference)
 
     this.addLocalMarkerFromMarkerData(data)
 
@@ -638,33 +663,42 @@ local function getLocalMenuLayout()
 
     local localPane
     local playerMarker
+    local localPanel
+    local layoutOffsetX = 0
+    local layoutOffsetY = 0
 
     if this.isMapMenuInitialized and menuMap.visible then ---@diagnostic disable-line: need-check-nil
         localPane = menuData.localPane
         playerMarker = menuData.localPlayerMarker
+        localPanel = menuData.localPanel
+        layoutOffsetX = menuData.localPane.positionX
+        layoutOffsetY = menuData.localPane.positionY
     elseif this.isMultiMenuInitialized and multiMenu.visible then ---@diagnostic disable-line: need-check-nil
         localPane = menuData.multiPane
+        localPanel = menuData.multiPanel
         local mapLayout = menuData.multiMapLayout
         local plM = menuData.multiPlayerMarker
         playerMarker = {
             positionX = -mapLayout.positionX + plM.positionX, ---@diagnostic disable-line: need-check-nil
             positionY = -mapLayout.positionY + plM.positionY, ---@diagnostic disable-line: need-check-nil
         }
+        layoutOffsetX = menuData.multiMapLayout.positionX
+        layoutOffsetY = menuData.multiMapLayout.positionY
     end
 
-    return localPane, playerMarker
+    return localPane, playerMarker, localPanel, layoutOffsetX, layoutOffsetY
 end
 
 
 ---@param data markerLib.markerData
 ---@return boolean
 local function isMarkerValidToCreate(data)
-    if data.cellName and activeCells.isCellActiveByName(data.cellName) then
-        return true
-    elseif data.trackedRef and data.trackedRef:valid() and activeCells.isCellActiveByName(data.trackedRef:getObject().cell.editorName:lower()) then
-        return true
-    elseif data.position and activeCells.isCellActiveByName(getCellEditorName(data.position.x, data.position.y):lower()) then
-        return true
+    if data.cellName and not activeCells.isCellActiveByName(data.cellName) then
+        return false
+    elseif data.trackedRef and (not data.trackedRef:valid() or not activeCells.isCellActiveByName(data.trackedRef:getObject().cell.editorName:lower())) then
+        return false
+    elseif data.position and not activeCells.isCellActiveByName(getCellEditorName(data.position.x, data.position.y):lower()) then
+        return false
     end
     return true
 end
@@ -676,17 +710,80 @@ function this.addLocalMarkerFromMarkerData(data)
     end
 end
 
+-- Thank you, chatgpt
+local function calculateOffscreenIndicator(targetX, targetY, screenWidth, screenHeight, screenOriginX, screenOriginY)
+    local screenCenterX = screenOriginX + screenWidth / 2
+    local screenCenterY = screenOriginY - screenHeight / 2
 
-local axisAngle = 0
-local axisAngleSin = 0
-local axisAngleCos = 0
-local lastCell = nil
-local lastActiveMenu = nil
----@type table<string, markerLib.markerContainer>
-local localMarkerPositionMap = {}
+    local dirX = targetX - screenCenterX
+    local dirY = targetY - screenCenterY
+
+    local magnitude = math.sqrt(dirX^2 + dirY^2)
+    local normX = dirX / magnitude
+    local normY = dirY / magnitude
+
+    local left = screenOriginX + 2
+    local right = screenOriginX + screenWidth - 2
+    local top = screenOriginY - 2
+    local bottom = screenOriginY - screenHeight + 2
+
+    local indicatorX, indicatorY
+
+    if normX ~= 0 then
+        local t1 = (left - screenCenterX) / normX
+        local t2 = (right - screenCenterX) / normX
+        if t1 > 0 then
+            local y = screenCenterY + t1 * normY
+            if y <= top and y >= bottom then
+                indicatorX = left
+                indicatorY = y
+            end
+        end
+        if not indicatorX and t2 > 0 then
+            local y = screenCenterY + t2 * normY
+            if y <= top and y >= bottom then
+                indicatorX = right
+                indicatorY = y
+            end
+        end
+    end
+
+    if normY ~= 0 then
+        local t3 = (top - screenCenterY) / normY
+        local t4 = (bottom - screenCenterY) / normY
+        if not indicatorX and t3 > 0 then
+            local x = screenCenterX + t3 * normX
+            if x >= left and x <= right then
+                indicatorX = x
+                indicatorY = top
+            end
+        end
+        if not indicatorX and t4 > 0 then
+            local x = screenCenterX + t4 * normX
+            if x >= left and x <= right then
+                indicatorX = x
+                indicatorY = bottom
+            end
+        end
+    end
+
+    return indicatorX, indicatorY
+end
+
+---@param id string
+---@param markerElement tes3uiElement
+local function removeMarker(id, markerElement)
+    this.deleteMarkerElement(markerElement)
+    this.activeWorldMarkers[id] = nil
+    this.activeLocalMarkers[id] = nil
+    this.waitingToCreate_world[id] = nil
+    this.waitingToCreate_local[id] = nil
+    log("marker removed, id:", id)
+end
+
 
 function this.createLocalMarkers()
-    local localPane, playerMarker = getLocalMenuLayout()
+    local localPane, playerMarker, localPanel = getLocalMenuLayout()
 
     local player = tes3.player
     local playerPos = player.position
@@ -703,12 +800,16 @@ function this.createLocalMarkers()
 
     if lastCell ~= playerCell then
         if playerCell.isInterior then
-            local nMarker = tes3.getReference("NorthMarker")
-            if nMarker then
-                axisAngle = nMarker.orientation.z
-                axisAngleCos = math.cos(axisAngle)
-                axisAngleSin = math.sin(axisAngle)
+            for ref in playerCell:iterateReferences({tes3.objectType.static}) do
+                if ref.baseObject.id == "NorthMarker" then
+                    axisAngle = ref.orientation.z
+                    break
+                else
+                    axisAngle = 0
+                end
             end
+            axisAngleCos = math.cos(axisAngle)
+            axisAngleSin = math.sin(axisAngle)
         end
         lastCell = playerCell
     end
@@ -767,6 +868,7 @@ function this.createLocalMarkers()
         local record = this.records[data.recordId]
 
         if not record then
+            this.removeLocal(data.id, data.cellId)
             goto continue
         end
 
@@ -785,6 +887,7 @@ function this.createLocalMarkers()
                         itemId = data.itemId
                     }
                     parentData.shouldUpdate = true
+                    parentData.offscreen = parentData.offscreen or data.offscreen
                 end
 
             else
@@ -808,6 +911,7 @@ function this.createLocalMarkers()
                         objectId = data.objectId,
                         position = pos,
                         lastZDiff = math.abs(pos.z - playerPos.z),
+                        offscreen = data.offscreen
                     }
                     local markerContainer = this.activeLocalMarkers[ref]
                     markerContainer.items[data.recordId] = {
@@ -858,6 +962,7 @@ function this.createLocalMarkers()
                         itemId = data.itemId
                     }
                     parentData.shouldUpdate = true
+                    parentData.offscreen = parentData.offscreen or data.offscreen
                 end
 
             else
@@ -880,6 +985,7 @@ function this.createLocalMarkers()
                         cell = tes3.getCell{id = data.cellName, position = pos},
                         conditionFunc = data.conditionFunc,
                         itemId = data.itemId,
+                        offscreen = data.offscreen
                     }
                     local markerContainer = this.activeLocalMarkers[id]
                     localMarkerPositionMap[posMapId] = markerContainer
@@ -901,10 +1007,6 @@ function this.createLocalMarkers()
     table.clear(this.waitingToCreate_local)
 end
 
-local lastLocalPaneWidth
-local lastLocalPaneHeight
-local lastPlayerMarkerTileX
-local lastPlayerMarkerTileY
 
 function this.updateLocalMarkers(force)
 
@@ -914,9 +1016,9 @@ function this.updateLocalMarkers(force)
     local playerPos = player.position
     local playerCell = player.cell
 
-    local localPane, playerMarker = getLocalMenuLayout()
+    local localPane, playerMarker, localPanel, layoutOffsetX, layoutOffsetY = getLocalMenuLayout()
 
-    if not localPane or not playerMarker then return end
+    if not localPane or not playerMarker or not localPanel then return end
 
     if lastLocalPaneWidth ~= localPane.width or lastLocalPaneHeight ~= localPane.height then
         force = true
@@ -935,7 +1037,7 @@ function this.updateLocalMarkers(force)
         end
     end
 
-    ---@type table<tes3uiElement, tes3vector3>
+    ---@type table<tes3uiElement, {pos : tes3vector3, containerData : markerLib.markerContainer}>
     local markersToUpdate = {}
 
     for id, data in pairs(this.activeLocalMarkers) do
@@ -948,8 +1050,7 @@ function this.updateLocalMarkers(force)
         end
 
         local function deleteMarker()
-            this.deleteMarkerElement(data.marker)
-            this.activeLocalMarkers[id] = nil
+            removeMarker(id, data.marker)
         end
 
         local refObj = data.ref
@@ -962,24 +1063,27 @@ function this.updateLocalMarkers(force)
             local ref = refObj:getObject()
             local refPos = ref.position
 
-            local shouldUpdate = data.shouldUpdate or force
+            local shouldUpdate = data.shouldUpdate or data.offscreen or force
             data.shouldUpdate = false
-            if shouldUpdate then goto action end
 
+            local offscreen = false
             for recordId, element in pairs(data.items) do
                 if checkConditionsToRemoveMarkerElement(element, data) then
                     data.items[recordId] = nil
                     shouldUpdate = true
-                    break
+                else
+                    offscreen = offscreen or (element.markerData and element.markerData.offscreen)
                 end
             end
-
-            if shouldUpdate then goto action end
 
             if table.size(data.items) == 0 then
                 deleteMarker()
                 goto continue
             end
+
+            data.offscreen = offscreen
+
+            if shouldUpdate then goto action end
 
             if not math.isclose(data.position.x, refPos.x, positionDifferenceToUpdate) or
                     not math.isclose(data.position.y, refPos.y, positionDifferenceToUpdate) then
@@ -998,11 +1102,11 @@ function this.updateLocalMarkers(force)
             data.position.z = refPos.z
             data.lastZDiff = math.abs(data.position.z - playerPos.z)
 
-            markersToUpdate[data.marker] = data.position
+            markersToUpdate[data.marker] = {pos = data.position, containerData = data}
 
         elseif activeCells.isCellActive(data.cell) then
 
-            local shouldUpdate = data.shouldUpdate or force
+            local shouldUpdate = data.shouldUpdate or data.offscreen or force
             data.shouldUpdate = false
             if shouldUpdate then goto action end
 
@@ -1032,7 +1136,7 @@ function this.updateLocalMarkers(force)
 
             data.lastZDiff = math.abs(data.position.z - playerPos.z)
 
-            markersToUpdate[data.marker] = data.position
+            markersToUpdate[data.marker] = {pos = data.position, containerData = data}
 
         else
             deleteMarker()
@@ -1063,7 +1167,14 @@ function this.updateLocalMarkers(force)
     local offsetX = playerMarkerTileX - 1
     local offsetY = 1 - playerMarkerTileY
 
-    for marker, pos in pairs(markersToUpdate) do
+    local panelFrameX1 = -layoutOffsetX
+    local panelFrameX2 = -layoutOffsetX + localPanel.width
+    local panelFrameY1 = -layoutOffsetY
+    local panelFrameY2 = -layoutOffsetY - localPanel.height
+
+    for marker, data in pairs(markersToUpdate) do
+
+        local pos = data.pos
 
         local posX
         local posY
@@ -1082,15 +1193,16 @@ function this.updateLocalMarkers(force)
             posY = -(-offsetY + 2 - (math.floor(pos.y / 8192) - math.floor(playerPos.y / 8192) + (pos.y % 8192) / 8192)) * tileHeight
         end
 
+        if data.containerData.offscreen and (posX < panelFrameX1 or posX > panelFrameX2 or posY > panelFrameY1 or posY < panelFrameY2) then
+            local nx, ny = calculateOffscreenIndicator(posX, posY, localPanel.width, localPanel.height, -layoutOffsetX, -layoutOffsetY)
+            posX = nx or posX
+            posY = ny or posY
+        end
+
         changeMarker(marker, posX, posY, force)
     end
 end
 
-
-local lastWorldPaneWidth = 0
-local lastWorldPaneHeight = 0
----@type table<string, markerLib.markerContainer>
-local worldMarkerPositionMap = {}
 
 function this.createWorldMarkers()
     lastActiveMenu = this.activeMenu
@@ -1113,7 +1225,10 @@ function this.createWorldMarkers()
     for markerId, data in pairs(this.waitingToCreate_world) do
         local record = this.records[data.recordId]
 
-        if not record then goto continue end
+        if not record then
+            this.removeWorld(data.id)
+            goto continue
+        end
 
         local pos = data.position
         local parentData = worldMarkerPositionMap[tostring(math.floor(pos.x / 48))..","..tostring(math.floor(pos.y / 48))]
@@ -1175,14 +1290,14 @@ function this.updateWorldMarkers(forceRedraw)
     local widthPerPix = worldPane.width / worldWidth
     local heightPerPix = worldPane.height / worldHeight
 
-    local function removeMarker(id, marker)
-        this.deleteMarkerElement(marker)
-        this.activeWorldMarkers[id] = nil
-    end
-
     for id, data in pairs(this.activeWorldMarkers) do
-        if this.markersToRemove[id] then
+
+        local function deleteMarker()
             removeMarker(id, data.marker)
+        end
+
+        if this.markersToRemove[id] then
+            deleteMarker()
             goto continue
         end
 
@@ -1194,7 +1309,7 @@ function this.updateWorldMarkers(forceRedraw)
         end
 
         if table.size(data.items) == 0 then
-            removeMarker(id, data.marker)
+            deleteMarker()
             goto continue
         end
 
@@ -1236,14 +1351,11 @@ function this.registerMarkersForCell(cell)
     if not cell then
         label = allMapLabelName
     else
-        if cell.isInterior then
-            label = cell.name:lower()
-        else
-            label = getExCellNameByGrid(cell.gridX, cell.gridY)
-        end
+        label = cell.editorName:lower()
     end
 
     for id, data in pairs(this.localMap[label] or {}) do
+        log("marker registered, id:", data.id, "cell:", label)
         this.addLocalMarkerFromMarkerData(data)
     end
 end
