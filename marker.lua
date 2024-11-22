@@ -49,6 +49,8 @@ local lastPlayerMarkerTileY
 local axisAngle = 0
 local axisAngleSin = 0
 local axisAngleCos = 0
+local interior0PointPositionX = 0
+local interior0PointPositionY = 0
 local lastCell = nil
 local lastActiveMenu = nil
 ---@type table<string, markerLib.markerContainer>
@@ -782,8 +784,40 @@ local function removeMarker(id, markerElement)
 end
 
 
+---@param cell tes3cell
+local function calcInterirAxisAngle(cell)
+    for ref in cell:iterateReferences({tes3.objectType.static}) do
+        if ref.baseObject.id == "NorthMarker" then
+            axisAngle = ref.orientation.z
+            break
+        else
+            axisAngle = 0
+        end
+    end
+    axisAngleCos = math.cos(axisAngle)
+    axisAngleSin = math.sin(axisAngle)
+end
+
+---@param localPane tes3uiElement
+---@param playerMarker tes3uiElement
+---@param playerPos tes3vector3
+local function calcInterior00Coordinate(localPane, playerMarker, playerPos)
+    local xShift = -playerPos.x
+    local yShift = playerPos.y
+
+    local posXNorm = xShift * axisAngleCos + yShift * axisAngleSin
+    local posYNorm = yShift * axisAngleCos - xShift * axisAngleSin
+
+    interior0PointPositionX = playerMarker.positionX + posXNorm / (8192 / localPane.width)
+    interior0PointPositionY = playerMarker.positionY - posYNorm / (8192 / localPane.height)
+end
+
+-- ################################################################################################
+
 function this.createLocalMarkers()
     local localPane, playerMarker, localPanel = getLocalMenuLayout()
+
+    if not localPane or not playerMarker then return end
 
     local player = tes3.player
     local playerPos = player.position
@@ -794,25 +828,15 @@ function this.createLocalMarkers()
         this.reregisterLocal()
     end
 
-    if table.size(this.waitingToCreate_local) == 0 then return end
-
-    if not localPane or not playerMarker then return end
-
     if lastCell ~= playerCell then
         if playerCell.isInterior then
-            for ref in playerCell:iterateReferences({tes3.objectType.static}) do
-                if ref.baseObject.id == "NorthMarker" then
-                    axisAngle = ref.orientation.z
-                    break
-                else
-                    axisAngle = 0
-                end
-            end
-            axisAngleCos = math.cos(axisAngle)
-            axisAngleSin = math.sin(axisAngle)
+            calcInterirAxisAngle(playerCell)
+            calcInterior00Coordinate(localPane, playerMarker, playerPos)
         end
         lastCell = playerCell
     end
+
+    if table.size(this.waitingToCreate_local) == 0 then return end
 
     table.clear(localMarkerPositionMap)
     for id, data in pairs(this.activeLocalMarkers) do
@@ -832,8 +856,7 @@ function this.createLocalMarkers()
         tileHeight = localPane.height / 3
         tileWidth = localPane.width / 3
     end
-    local playerMarkerX = playerMarker.positionX
-    local playerMarkerY = playerMarker.positionY
+
     local widthPerPix = 8192 / tileWidth
     local heightPerPix = 8192 / tileHeight
 
@@ -845,14 +868,11 @@ function this.createLocalMarkers()
 
     ---@return number, number
     local function calcInteriorPos(position)
-        local xShift = (position.x - playerPos.x)
-        local yShift = (playerPos.y - position.y)
+        local posXNorm = position.x * axisAngleCos - position.y * axisAngleSin
+        local posYNorm = -position.y * axisAngleCos - position.x * axisAngleSin
 
-        local posXNorm = xShift * axisAngleCos + yShift * axisAngleSin
-        local posYNorm = yShift * axisAngleCos - xShift * axisAngleSin
-
-        local posX = playerMarkerX + posXNorm / widthPerPix
-        local posY = playerMarkerY - posYNorm / heightPerPix
+        local posX = interior0PointPositionX + posXNorm / widthPerPix
+        local posY = interior0PointPositionY - posYNorm / heightPerPix
 
         return posX, posY
     end
@@ -1024,6 +1044,8 @@ function this.updateLocalMarkers(force)
         force = true
         lastLocalPaneWidth = localPane.width
         lastLocalPaneHeight = localPane.height
+
+        calcInterior00Coordinate(localPane, playerMarker, playerPos)
     end
 
     if not playerCell.isInterior then
@@ -1156,8 +1178,7 @@ function this.updateLocalMarkers(force)
         tileHeight = localPane.height / 3
         tileWidth = localPane.width / 3
     end
-    local playerMarkerX = playerMarker.positionX
-    local playerMarkerY = playerMarker.positionY
+
     local widthPerPix = 8192 / tileWidth
     local heightPerPix = 8192 / tileHeight
 
@@ -1180,14 +1201,11 @@ function this.updateLocalMarkers(force)
         local posY
 
         if playerCell.isInterior then
-            local xShift = (pos.x - playerPos.x)
-            local yShift = (playerPos.y - pos.y)
+            local posXNorm = pos.x * axisAngleCos - pos.y * axisAngleSin
+            local posYNorm = -pos.y * axisAngleCos - pos.x * axisAngleSin
 
-            local posXNorm = xShift * axisAngleCos + yShift * axisAngleSin
-            local posYNorm = yShift * axisAngleCos - xShift * axisAngleSin
-
-            posX = playerMarkerX + posXNorm / widthPerPix
-            posY = playerMarkerY - posYNorm / heightPerPix
+            posX = interior0PointPositionX + posXNorm / widthPerPix
+            posY = interior0PointPositionY - posYNorm / heightPerPix
         else
             posX = (offsetX + 1 + math.floor(pos.x / 8192) - math.floor(playerPos.x / 8192) + (pos.x % 8192) / 8192) * tileWidth
             posY = -(-offsetY + 2 - (math.floor(pos.y / 8192) - math.floor(playerPos.y / 8192) + (pos.y % 8192) / 8192)) * tileHeight
