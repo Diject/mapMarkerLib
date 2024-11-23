@@ -263,7 +263,7 @@ end
 ---@class markerLib.addLocalMarker.params
 ---@field recordId string
 ---@field position tes3vector3|{x : number, y : number, z : number}|nil
----@field cellName string|nil should be nil if the cell is exterior
+---@field cell string|tes3cell|nil should be nil if the cell is exterior
 ---@field objectId string|nil should be lowercase
 ---@field itemId string|nil should be lowercase
 ---@field conditionFunc (fun(data: markerLib.activeLocalMarkerElement):boolean)|nil
@@ -277,15 +277,29 @@ function this.addLocal(params)
     if not this.localMap then return end
 
     local cellName
-    if (params.position and params.position.x and params.position.y) or params.cellName then
-        cellName = params.cellName or getCellEditorName(params.position.x, params.position.y)
-    else
-        cellName = allMapLabelName
-    end
-    cellName = cellName:lower()
+    local cellNameLabel
 
-    if not this.localMap[cellName] then
-        this.localMap[cellName] = {}
+    if params.cell then
+        local cell = params.cell
+        if type(cell) == "string" then
+            cellNameLabel = cell
+            cellName = cell:lower()
+        else
+            cellNameLabel = cell.editorName ---@diagnostic disable-line: need-check-nil
+            if cell.isInterior then ---@diagnostic disable-line: need-check-nil
+                cellName = cell.editorName:lower() ---@diagnostic disable-line: need-check-nil
+            end
+        end
+    elseif (params.position and params.position.x and params.position.y) then
+        cellNameLabel = getCellEditorName(params.position.x, params.position.y)
+    else
+        cellNameLabel = allMapLabelName
+    end
+
+    cellNameLabel = cellNameLabel:lower() ---@diagnostic disable-line: need-check-nil
+
+    if not this.localMap[cellNameLabel] then
+        this.localMap[cellNameLabel] = {}
     end
 
     local position = params.position
@@ -301,9 +315,10 @@ function this.addLocal(params)
     ---@type markerLib.markerData
     local data = {
         position = position,
+        cellName = cellName,
         recordId = params.recordId,
         id = id,
-        cellId = cellName,
+        cellId = cellNameLabel,
         objectId = objectId,
         itemId = params.itemId,
         temporary = params.temporary,
@@ -311,13 +326,13 @@ function this.addLocal(params)
         conditionFunc = params.conditionFunc,
         offscreen = params.canBeOffscreen,
     }
-    this.localMap[cellName][id] = data
+    this.localMap[cellNameLabel][id] = data
 
-    log("local marker added, id:", id, "cell:", cellName, "recId:", params.recordId, "object:", position or objectId or reference)
+    log("local marker added, id:", id, "cell:", cellNameLabel, "recId:", params.recordId, "object:", position or objectId or reference)
 
     this.addLocalMarkerFromMarkerData(data)
 
-    return id, cellName
+    return id, cellNameLabel
 end
 
 ---@param id string marker id
@@ -699,7 +714,7 @@ local function isMarkerValidToCreate(data)
         return false
     elseif data.trackedRef and (not data.trackedRef:valid() or not activeCells.isCellActiveByName(data.trackedRef:getObject().cell.editorName:lower())) then
         return false
-    elseif data.position and not activeCells.isCellActiveByName(getCellEditorName(data.position.x, data.position.y):lower()) then
+    elseif not data.cellName and data.position and not activeCells.isCellActiveByName(getCellEditorName(data.position.x, data.position.y):lower()) then
         return false
     end
     return true
@@ -812,6 +827,72 @@ local function calcInterior00Coordinate(localPane, playerMarker, playerPos)
     interior0PointPositionY = playerMarker.positionY - posYNorm / (8192 / localPane.height)
 end
 
+local function buildLocalMarkerPosMap()
+    table.clear(localMarkerPositionMap)
+    for id, data in pairs(this.activeLocalMarkers) do
+        local pos = data.position
+        if not data.ref and not data.objectId and pos then
+            local mapId = tostring(math.floor(pos.x / 48))..","..tostring(math.floor(pos.y / 48))
+            localMarkerPositionMap[mapId] = data
+        end
+    end
+end
+
+local function clearLocalMarkerPosMap()
+    table.clear(localMarkerPositionMap)
+end
+
+---@param position tes3vector3
+---@return markerLib.markerContainer?
+local function getLocalMarkerPosData(position)
+    local mapId = tostring(math.floor(position.x / 48))..","..tostring(math.floor(position.y / 48))
+    return localMarkerPositionMap[mapId]
+end
+
+---@param position tes3vector3
+---@param data markerLib.markerContainer
+local function addLocalMarkerPosData(position, data)
+    local mapId = tostring(math.floor(position.x / 48))..","..tostring(math.floor(position.y / 48))
+    localMarkerPositionMap[mapId] = data
+end
+
+---@param position tes3vector3
+local function removeLocalMarkerPosData(position)
+    local mapId = tostring(math.floor(position.x / 48))..","..tostring(math.floor(position.y / 48))
+    localMarkerPositionMap[mapId] = nil
+end
+
+local function buildWorldMarkerPosMap()
+    table.clear(worldMarkerPositionMap)
+    for id, data in pairs(this.activeWorldMarkers) do
+        local pos = data.position
+        if pos then
+            local mapId = tostring(math.floor(pos.x / 2000))..","..tostring(math.floor(pos.y / 2000))
+            worldMarkerPositionMap[mapId] = data
+        end
+    end
+end
+
+---@param position tes3vector3
+---@return markerLib.markerContainer?
+local function getWorldMarkerPosData(position)
+    local mapId = tostring(math.floor(position.x / 2000))..","..tostring(math.floor(position.y / 2000))
+    return worldMarkerPositionMap[mapId]
+end
+
+---@param position tes3vector3
+---@param data markerLib.markerContainer
+local function addWorldMarkerPosData(position, data)
+    local mapId = tostring(math.floor(position.x / 2000))..","..tostring(math.floor(position.y / 2000))
+    worldMarkerPositionMap[mapId] = data
+end
+
+---@param position tes3vector3
+local function removeWorldMarkerPosData(position)
+    local mapId = tostring(math.floor(position.x / 2000))..","..tostring(math.floor(position.y / 2000))
+    worldMarkerPositionMap[mapId] = nil
+end
+
 -- ################################################################################################
 
 function this.createLocalMarkers()
@@ -837,15 +918,6 @@ function this.createLocalMarkers()
     end
 
     if table.size(this.waitingToCreate_local) == 0 then return end
-
-    table.clear(localMarkerPositionMap)
-    for id, data in pairs(this.activeLocalMarkers) do
-        local pos = data.position
-        if not data.ref and not data.objectId and pos then
-            local mapId = tostring(math.floor(pos.x / 48))..","..tostring(math.floor(pos.y / 48))
-            localMarkerPositionMap[mapId] = data
-        end
-    end
 
     local tileHeight
     local tileWidth
@@ -967,8 +1039,7 @@ function this.createLocalMarkers()
         elseif data.position then -- for static markers
 
             local position = data.position
-            local posMapId = tostring(math.floor(position.x / 48))..","..tostring(math.floor(position.y / 48))
-            local parentData = localMarkerPositionMap[posMapId]
+            local parentData = getLocalMarkerPosData(position)
 
             if parentData and parentData.marker then
                 if parentData.items[data.recordId] then
@@ -996,7 +1067,7 @@ function this.createLocalMarkers()
                 local marker = drawMarker(localPane, posX, posY, record, position)
                 if marker then
                     local id = getId()
-                    local pos = tes3vector3.new(data.position.x, data.position.y, data.position.z)
+                    local pos = tes3vector3.new(position.x, position.y, position.z)
                     this.activeLocalMarkers[id] = {
                         marker = marker,
                         items = {},
@@ -1008,7 +1079,6 @@ function this.createLocalMarkers()
                         offscreen = data.offscreen
                     }
                     local markerContainer = this.activeLocalMarkers[id]
-                    localMarkerPositionMap[posMapId] = markerContainer
                     markerContainer.items[data.recordId] = {
                         id = data.id,
                         record = record,
@@ -1017,6 +1087,7 @@ function this.createLocalMarkers()
                         itemId = data.itemId
                     }
                     marker:setLuaData("data", markerContainer)
+                    addLocalMarkerPosData(position, markerContainer)
                 end
             end
         end
@@ -1031,6 +1102,10 @@ end
 function this.updateLocalMarkers(force)
 
     this.lastLocalUpdate = os.clock()
+
+    if table.size(this.activeLocalMarkers) == 0 then
+        return
+    end
 
     local player = tes3.player
     local playerPos = player.position
@@ -1143,6 +1218,7 @@ function this.updateLocalMarkers(force)
             if shouldUpdate then goto action end
 
             if table.size(data.items) == 0 then
+                removeLocalMarkerPosData(data.position)
                 deleteMarker()
                 goto continue
             end
@@ -1161,6 +1237,7 @@ function this.updateLocalMarkers(force)
             markersToUpdate[data.marker] = {pos = data.position, containerData = data}
 
         else
+            removeLocalMarkerPosData(data.position)
             deleteMarker()
         end
 
@@ -1231,25 +1308,19 @@ function this.createWorldMarkers()
     local widthPerPix = worldPane.width / worldWidth ---@diagnostic disable-line: need-check-nil
     local heightPerPix = worldPane.height / worldHeight ---@diagnostic disable-line: need-check-nil
 
-    table.clear(worldMarkerPositionMap)
-    for id, data in pairs(this.activeWorldMarkers) do
-        local pos = data.position
-        if pos then
-            local mapId = tostring(math.floor(pos.x / 48))..","..tostring(math.floor(pos.y / 48))
-            worldMarkerPositionMap[mapId] = data
-        end
-    end
-
     for markerId, data in pairs(this.waitingToCreate_world) do
         local record = this.records[data.recordId]
 
         if not record then
             this.removeWorld(data.id)
+            if data.position then
+                removeWorldMarkerPosData(data.position)
+            end
             goto continue
         end
 
         local pos = data.position
-        local parentData = worldMarkerPositionMap[tostring(math.floor(pos.x / 48))..","..tostring(math.floor(pos.y / 48))]
+        local parentData = getWorldMarkerPosData(pos)
 
         if parentData then
             if parentData.items[data.recordId] then
@@ -1282,6 +1353,7 @@ function this.createWorldMarkers()
                     markerData = data,
                 }
                 marker:setLuaData("data", markerContainer)
+                addWorldMarkerPosData(pos, markerContainer)
             end
         end
         ::continue::
@@ -1293,11 +1365,11 @@ end
 function this.updateWorldMarkers(forceRedraw)
     this.lastWorldUpdate = os.clock()
 
-    local menu = tes3ui.findMenu("MenuMap")
-    if not menu then return end
-    local worldMap = menu:findChild("MenuMap_world")
-    if not worldMap then return end
-    local worldPane = worldMap:findChild("MenuMap_world_pane")
+    if table.size(this.activeWorldMarkers) == 0 then
+        return
+    end
+
+    local worldPane = this.menu.worldPane
     if not worldPane then return end
 
     if not this.shouldUpdateWorld and not forceRedraw and
@@ -1311,6 +1383,9 @@ function this.updateWorldMarkers(forceRedraw)
     for id, data in pairs(this.activeWorldMarkers) do
 
         local function deleteMarker()
+            if data.position then
+                removeWorldMarkerPosData(data.position)
+            end
             removeMarker(id, data.marker)
         end
 
@@ -1402,6 +1477,7 @@ function this.reregisterLocal()
             end
         end
     end
+    clearLocalMarkerPosMap()
     table.clear(this.activeLocalMarkers)
 end
 
@@ -1433,6 +1509,8 @@ function this.reset()
     lastLocalPaneHeight = 0
     lastPlayerMarkerTileX = nil
     lastPlayerMarkerTileY = nil
+    localMarkerPositionMap = {}
+    worldMarkerPositionMap = {}
     storageData = nil
     this.activeMenu = nil
 
