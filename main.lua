@@ -108,6 +108,7 @@ local function cellActivatedCallback(e)
         markerLib.init()
     end
     activeCells.registerCell(e.cell)
+    markerLib.resetIngameMarkerMapFlag()
     markerLib.registerMarkersForCell(e.cell)
 end
 event.register(tes3.event.cellActivated, cellActivatedCallback)
