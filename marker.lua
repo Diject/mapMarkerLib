@@ -119,6 +119,8 @@ this.records = nil
 ---@type table<string, markerLib.markerData>
 this.world = nil
 
+---@class markerLib.recordOOP
+---@
 
 ---@class markerLib.markerData
 ---@field recordId string recordId
@@ -268,7 +270,7 @@ end
 
 
 ---@class markerLib.addLocalMarker.params
----@field recordId string
+---@field record string|markerLib.recordOOP
 ---@field position tes3vector3|{x : number, y : number, z : number}|nil
 ---@field cell string|tes3cell|nil should be nil if the cell is exterior
 ---@field objectId string|nil should be lowercase
@@ -283,7 +285,7 @@ end
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
 function this.addLocal(params)
-    if not this.localMap then return end
+    if not this.localMap or not params.record then return end
 
     local cellName
     local cellNameLabel
@@ -319,13 +321,20 @@ function this.addLocal(params)
     local objectId = params.objectId
     local reference = params.trackedRef
 
+    local recordId
+    if type(params.record) == "string" then
+        recordId = params.record
+    else
+        recordId = params.record.id
+    end
+
     local id = getId()
 
     ---@type markerLib.markerData
     local data = {
         position = position,
         cellName = cellName,
-        recordId = params.recordId,
+        recordId = recordId,
         id = id,
         cellId = cellNameLabel,
         objectId = objectId,
@@ -339,7 +348,7 @@ function this.addLocal(params)
     }
     this.localMap[cellNameLabel][id] = data
 
-    log("local marker added, id:", id, "cell:", cellNameLabel, "recId:", params.recordId, "object:", position or objectId or reference)
+    log("local marker added, id:", id, "cell:", cellNameLabel, "recId:", recordId, "object:", position or objectId or reference)
 
     this.addLocalMarkerFromMarkerData(data)
 
@@ -361,21 +370,36 @@ function this.removeLocal(id, cellId)
     return false
 end
 
+---@return markerLib.markerData?
+function this.getLocal(id, cellId)
+    if not this.localMap or not this.localMap[cellId] then return end
+    return this.localMap[cellId][id]
+end
+
 ---@class markerLib.addWorldMarker.params
----@field recordId string
----@field x number
----@field y number
+---@field record string|markerLib.worldMarkerOOP
+---@field x number x coordinate of the marker
+---@field y number y coordinate of the marker
 
 ---@param params markerLib.addWorldMarker.params
 ---@return string|nil ret returns marker id if added. Or nil if not
 function this.addWorld(params)
-    if not this.world then return end
+    if not this.world or not params.record then return end
+
+    local recordId
+    if type(params.record) == "string" then
+        recordId = params.record
+    else
+        recordId = params.record.id
+    end
+
+    local position = {x = params.x, y = params.y}
 
     local id = getId()
 
     local data = {
-        position = {x = params.x, y = params.y},
-        recordId = params.recordId,
+        position = position,
+        recordId = recordId,
         id = id,
         markerId = id,
     }
@@ -384,6 +408,8 @@ function this.addWorld(params)
 
     this.addWorldMarkerFromMarkerData(data)
     this.shouldUpdateWorld = true
+
+    log("world marker added, id:", id, "recId:", recordId, "position", position)
 
     return id
 end
@@ -400,6 +426,12 @@ function this.removeWorld(id)
         return true
     end
     return false
+end
+
+---@return markerLib.markerData?
+function this.getWorld(id)
+    if not this.world then return end
+    return this.world[id]
 end
 
 
