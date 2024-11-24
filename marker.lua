@@ -133,6 +133,7 @@ this.world = nil
 ---@field trackedRef mwseSafeObjectHandle|nil
 ---@field offscreen boolean|nil
 ---@field replace boolean|nil hide ingame static markers (like door markers) if this marker is close to them
+---@field shortTerm boolean|nil if true, the marker will be deleted after the cell is changed
 
 ---@class markerLib.markerRecord
 ---@field id string|nil
@@ -277,6 +278,7 @@ end
 ---@field trackedRef tes3reference|nil
 ---@field canBeOffscreen boolean|nil
 ---@field replace boolean|nil hide ingame static markers (like door markers) if this marker is close to them
+---@field shortTerm boolean|nil if true, the marker will be deleted after the interior flag for the player cell is changed, or after the interior cell is changed
 
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
@@ -333,6 +335,7 @@ function this.addLocal(params)
         conditionFunc = params.conditionFunc,
         offscreen = params.canBeOffscreen,
         replace = params.replace,
+        shortTerm = params.shortTerm,
     }
     this.localMap[cellNameLabel][id] = data
 
@@ -951,18 +954,33 @@ function this.createLocalMarkers()
     local playerPos = player.position
     local playerCell = player.cell
 
-    if this.activeMenu ~= lastActiveMenu or ((lastCell or {}).isInterior ~= playerCell.isInterior) then
-        lastActiveMenu = this.activeMenu
-        this.reregisterLocal()
-    end
+    lastCell = lastCell or {}
 
     if lastCell ~= playerCell then
         if playerCell.isInterior then
             calcInterirAxisAngle(playerCell)
             calcInterior00Coordinate(localPane, playerMarker, playerPos)
         end
-        lastCell = playerCell
+
+        if lastCell.isInterior ~= playerCell.isInterior or
+                (playerCell.isInterior and playerCell.editorName ~= lastCell.editorName) then
+
+            for id, data in pairs(this.activeLocalMarkers) do
+                if data.markerData and data.markerData.shortTerm then
+                    this.removeLocal(data.markerData.id, data.markerData.cellId)
+                    removeMarker(id, data.marker)
+                end
+            end
+
+        end
     end
+
+    if this.activeMenu ~= lastActiveMenu or lastCell.isInterior ~= playerCell.isInterior then
+        lastActiveMenu = this.activeMenu
+        this.reregisterLocal()
+    end
+
+    lastCell = playerCell
 
     if table.size(this.waitingToCreate_local) == 0 then return end
 
@@ -1372,7 +1390,7 @@ function this.updateLocalMarkers(force)
                 parent.visible = false
                 data.containerData.parent = parent
             else
-                data.containerData.parent = {}
+                data.containerData.parent = {} ---@diagnostic disable-line: missing-fields
             end
         end
 
@@ -1508,6 +1526,7 @@ end
 
 ---@param marker tes3uiElement
 function this.deleteMarkerElement(marker)
+    if not marker then return end
     marker.visible = false
     this.markerElementsToDelete[marker] = true
 end
