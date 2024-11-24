@@ -1596,7 +1596,7 @@ end
 
 ---@return boolean ret returns true if was successful
 function this.updateMapMenu()
-    local menu = tes3ui.findMenu("MenuMap")
+    local menu = this.menu.menuMap
     if not menu then return false end
 
     menu:updateLayout()
