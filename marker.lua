@@ -1558,6 +1558,9 @@ function this.updateWorldMarkers(forceRedraw)
         return
     end
 
+    lastWorldPaneWidth = worldPane.width
+    lastWorldPaneHeight = worldPane.height
+
     for id, data in pairs(this.activeWorldMarkers) do
 
         local function deleteMarker()
