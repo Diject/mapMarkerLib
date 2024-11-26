@@ -52,7 +52,7 @@ local function menuMapActivated(e)
     menu:updateLayout()
 end
 
-event.register(tes3.event.uiActivated, menuMapActivated, {filter = "MenuMap"})
+event.register(tes3.event.uiActivated, menuMapActivated, {filter = "MenuMap", priority = -277})
 
 --- @param e uiActivatedEventData
 local function menuMultiActivated(e)

@@ -14,10 +14,14 @@ local minCellGridX = mcp_mapExpansion and -51 or -28
 local minCellGridY = mcp_mapExpansion and -64 or -28
 local maxCellGridX = mcp_mapExpansion and 51 or 28
 local maxCellGridY = mcp_mapExpansion and 38 or 28
-local cellWidthMinPart = -minCellGridX * 8192
-local cellHeightMaxPart = (maxCellGridY + 1) * 8192
-local worldWidth = (-minCellGridX + maxCellGridX - 0.25) * 8192
-local worldHeight = (-minCellGridY + maxCellGridY - 0.75) * 8192
+
+local worldBounds = {
+    minX = minCellGridX,
+    maxX = maxCellGridX,
+    minY = minCellGridY,
+    maxY = maxCellGridY,
+    cellResolution = mcp_mapExpansion and 5 or 9,
+}
 
 local positionDifferenceToUpdate = 16
 
@@ -119,6 +123,8 @@ this.records = nil
 ---@type table<string, markerLib.markerData>
 this.world = nil
 
+this.worldBounds = worldBounds
+
 ---@class markerLib.recordOOP
 ---@
 
@@ -175,6 +181,14 @@ function this.init()
             this.records[id] = nil
         end
     end
+
+    local uiexpCommon = include("UI Expansion.common")
+    if uiexpCommon and uiexpCommon.config and uiexpCommon.config.components and
+            uiexpCommon.config.components.mapPlugin and uiexpCommon.config.mapConfig then
+        this.worldBounds = uiexpCommon.config.mapConfig
+    else
+        this.worldBounds = worldBounds
+    end
 end
 
 ---@class markerLib.menus
@@ -190,6 +204,7 @@ end
 ---@field multiPane tes3uiElement?
 ---@field multiPlayerMarker tes3uiElement?
 ---@field multiMapLayout tes3uiElement?
+---@field uiExpZoomBar tes3uiElement?
 
 ---@type markerLib.menus
 this.menu = {}
@@ -224,6 +239,16 @@ function this.initMapMenuInfo(menu)
             this.activeMenu = "MenuMapLocal"
         elseif menuData.worldMap.visible then
             this.activeMenu = "MenuMapWorld"
+        end
+    end
+
+    local uiExpBlock = menu:findChild("UIEXP:MapControls")
+    if uiExpBlock then
+        for _, child in pairs(uiExpBlock.children) do
+            if child.type == tes3.uiElementType.scrollBar then
+                menuData.uiExpZoomBar = child
+                break
+            end
         end
     end
 
@@ -678,8 +703,8 @@ local function changeMarker(markerEl, x, y, updateImage)
     end
 
     if x and y then
-        markerEl.positionX = x + (rec.textureShiftX or -rec.width / 2)
-        markerEl.positionY = y + (rec.textureShiftY or rec.height / 2)
+        markerEl.positionX = math.round(x) + (rec.textureShiftX or -rec.width / 2)
+        markerEl.positionY = math.round(y) + (rec.textureShiftY or rec.height / 2)
         ret = ret or true
     end
 
@@ -1430,15 +1455,40 @@ function this.updateLocalMarkers(force)
     end
 end
 
+-- ################################################################################################
+
+---@param pos tes3vector2|tes3vector3|{x : number, y : number}
+---@return number x, number y
+function this.convertObjectPosToWorldMapPaneCoordinates(pos)
+    local zoomBar = this.menu.uiExpZoomBar
+    local currentZoom = 2
+    local xOffset = 4
+    local yOffset = 4
+    if zoomBar then
+        currentZoom = zoomBar and zoomBar:getPropertyInt("PartScrollBar_current") / 100 + 1.0
+        xOffset = 0
+        yOffset = 0
+    else
+        currentZoom = this.menu.worldPane.width / 512
+        if mcp_mapExpansion then
+            xOffset = 1
+            yOffset = 2
+        end
+    end
+
+    local x = ((-this.worldBounds.minX + pos.x / 8192) * this.worldBounds.cellResolution + xOffset) * currentZoom
+    local y = ((-this.worldBounds.maxY - 1 + pos.y / 8192) * this.worldBounds.cellResolution - yOffset) * currentZoom
+
+    return x, y
+end
+
+-- ################################################################################################
 
 function this.createWorldMarkers()
     lastActiveMenu = this.activeMenu
     if table.size(this.waitingToCreate_world) == 0 then return end
 
     local worldPane = this.menu.worldPane
-
-    local widthPerPix = worldPane.width / worldWidth ---@diagnostic disable-line: need-check-nil
-    local heightPerPix = worldPane.height / worldHeight ---@diagnostic disable-line: need-check-nil
 
     for markerId, data in pairs(this.waitingToCreate_world) do
         local record = this.records[data.recordId]
@@ -1466,8 +1516,7 @@ function this.createWorldMarkers()
                 parentData.shouldUpdate = true
             end
         else
-            local x = (cellWidthMinPart + pos.x) * widthPerPix
-            local y = (-cellHeightMaxPart + pos.y) * heightPerPix
+            local x, y = this.convertObjectPosToWorldMapPaneCoordinates(pos)
 
             local marker = drawMarker(worldPane, x, y, record)
             if marker then
@@ -1509,9 +1558,6 @@ function this.updateWorldMarkers(forceRedraw)
         return
     end
 
-    local widthPerPix = worldPane.width / worldWidth
-    local heightPerPix = worldPane.height / worldHeight
-
     for id, data in pairs(this.activeWorldMarkers) do
 
         local function deleteMarker()
@@ -1540,8 +1586,7 @@ function this.updateWorldMarkers(forceRedraw)
 
         local pos = data.position
 
-        local x = (cellWidthMinPart + pos.x) * widthPerPix
-        local y = (-cellHeightMaxPart + pos.y) * heightPerPix
+        local x, y = this.convertObjectPosToWorldMapPaneCoordinates(pos)
 
         changeMarker(data.marker, x, y, forceRedraw)
 
@@ -1549,6 +1594,8 @@ function this.updateWorldMarkers(forceRedraw)
     end
     this.shouldUpdateWorld = false
 end
+
+-- ################################################################################################
 
 ---@param data markerLib.markerData
 function this.addWorldMarkerFromMarkerData(data)
