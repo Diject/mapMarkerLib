@@ -303,7 +303,7 @@ end
 ---@field conditionFunc (fun(data: markerLib.activeLocalMarkerElement):boolean)|nil
 ---@field temporary boolean|nil
 ---@field trackedRef tes3reference|nil
----@field canBeOffscreen boolean|nil
+---@field trackOffscreen boolean|nil show the marker on the map menu border when it is offscreen
 ---@field replace boolean|nil hide ingame static markers (like door markers) if this marker is close to them
 ---@field shortTerm boolean|nil if true, the marker will be deleted after the interior flag for the player cell is changed, or after the interior cell is changed
 
@@ -367,7 +367,7 @@ function this.addLocal(params)
         temporary = params.temporary,
         trackedRef = reference and tes3.makeSafeObjectHandle(reference),
         conditionFunc = params.conditionFunc,
-        offscreen = params.canBeOffscreen,
+        offscreen = params.trackOffscreen,
         replace = params.replace,
         shortTerm = params.shortTerm,
     }
