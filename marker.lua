@@ -69,6 +69,11 @@ local worldMarkerPositionMap = {}
 local ingameMarkerMap = {}
 local ingameMarkerMapReady = false
 
+local last0XCoord = 0
+local last0YCoord = 0
+local menu00CoordinateSteadyCounter = 0
+local is00CoordinateSteady = false
+
 
 ---@class markerLib.activeWorldMarkerContainer
 ---@field id string
@@ -141,7 +146,7 @@ this.worldBounds = worldBounds
 ---@field trackedRef mwseSafeObjectHandle|nil
 ---@field offscreen boolean|nil
 ---@field replace boolean|nil hide ingame static markers (like door markers) if this marker is close to them
----@field shortTerm boolean|nil if true, the marker will be deleted after the cell is changed
+---@field shortTerm boolean|nil if true, the marker will be deleted after the cell has changed
 
 ---@class markerLib.markerRecord
 ---@field id string|nil
@@ -884,6 +889,7 @@ end
 ---@param localPane tes3uiElement
 ---@param playerMarker tes3uiElement
 ---@param playerPos tes3vector3
+---@return boolean coordinatesHaveShanged
 local function calcInterior00Coordinate(localPane, playerMarker, playerPos)
     local xShift = -playerPos.x
     local yShift = playerPos.y
@@ -893,6 +899,11 @@ local function calcInterior00Coordinate(localPane, playerMarker, playerPos)
 
     interior0PointPositionX = playerMarker.positionX + posXNorm / (8192 / localPane.width)
     interior0PointPositionY = playerMarker.positionY - posYNorm / (8192 / localPane.height)
+
+    local ret = not (math.isclose(interior0PointPositionX, last0XCoord, 2) and math.isclose(interior0PointPositionY, last0YCoord, 2))
+    last0XCoord = interior0PointPositionX
+    last0YCoord = interior0PointPositionY
+    return ret
 end
 
 -- ################################################################################################
@@ -1017,10 +1028,10 @@ function this.createLocalMarkers()
         if playerCell.isInterior then
             calcInterirAxisAngle(playerCell)
             calcInterior00Coordinate(localPane, playerMarker, playerPos)
+            is00CoordinateSteady = false
         end
 
-        if lastCell.isInterior ~= playerCell.isInterior or
-                (playerCell.isInterior and playerCell.editorName ~= lastCell.editorName) then
+        if lastCell.isInterior ~= playerCell.isInterior or playerCell.isInterior then
 
             for id, data in pairs(this.activeLocalMarkers) do
                 if data.markerData and data.markerData.shortTerm then
@@ -1028,11 +1039,10 @@ function this.createLocalMarkers()
                     removeMarker(id, data.marker)
                 end
             end
-
         end
     end
 
-    if this.activeMenu ~= lastActiveMenu or lastCell.isInterior ~= playerCell.isInterior then
+    if this.activeMenu ~= lastActiveMenu or lastCell ~= playerCell then
         lastActiveMenu = this.activeMenu
         this.reregisterLocal()
     end
@@ -1259,6 +1269,19 @@ function this.updateLocalMarkers(force)
         lastLocalPaneHeight = localPane.height
 
         calcInterior00Coordinate(localPane, playerMarker, playerPos)
+        is00CoordinateSteady = false
+
+    elseif not is00CoordinateSteady then
+        if calcInterior00Coordinate(localPane, playerMarker, playerPos) then
+            menu00CoordinateSteadyCounter = 0
+        else
+            menu00CoordinateSteadyCounter = menu00CoordinateSteadyCounter + 1
+        end
+
+        if menu00CoordinateSteadyCounter >= 8 then
+            menu00CoordinateSteadyCounter = 0
+            is00CoordinateSteady = true
+        end
     end
 
     if not playerCell.isInterior then
@@ -1699,6 +1722,10 @@ function this.reset()
     worldMarkerPositionMap = {}
     ingameMarkerMap = {}
     ingameMarkerMapReady = false
+    last0XCoord = 0
+    last0YCoord = 0
+    menu00CoordinateSteadyCounter = 0
+    is00CoordinateSteady = false
 
     storageData = nil
     this.activeMenu = nil
