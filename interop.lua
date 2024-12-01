@@ -78,6 +78,7 @@ this.record = {}
 
 ---@class markerLib.recordOOP
 local recordOOP = {}
+recordOOP.__index = recordOOP
 
 ---@param params markerLib.markerRecord
 ---@return markerLib.recordOOP?
@@ -119,6 +120,7 @@ this.localMarker = {}
 
 ---@class markerLib.localMarkerOOP
 local localMarkerOOP = {}
+localMarkerOOP.__index = localMarkerOOP
 
 ---@param params markerLib.addLocalMarker.params
 ---@return markerLib.localMarkerOOP?
@@ -149,6 +151,7 @@ this.worldMarker = {}
 
 ---@class markerLib.worldMarkerOOP
 local worldMarkerOOP = {}
+worldMarkerOOP.__index = worldMarkerOOP
 
 ---@param params markerLib.addWorldMarker.params
 ---@return markerLib.worldMarkerOOP?
