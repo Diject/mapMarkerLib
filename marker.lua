@@ -804,7 +804,7 @@ function this.addLocalMarkerFromMarkerData(data)
 end
 
 -- Thank you, chatgpt
-local function calculateOffscreenIndicator(targetX, targetY, screenWidth, screenHeight, screenOriginX, screenOriginY)
+local function calculateOffscreenIndicator(targetX, targetY, screenWidth, screenHeight, screenOriginX, screenOriginY, border)
     local screenCenterX = screenOriginX + screenWidth / 2
     local screenCenterY = screenOriginY - screenHeight / 2
 
@@ -815,10 +815,10 @@ local function calculateOffscreenIndicator(targetX, targetY, screenWidth, screen
     local normX = dirX / magnitude
     local normY = dirY / magnitude
 
-    local left = screenOriginX + 2
-    local right = screenOriginX + screenWidth - 2
-    local top = screenOriginY - 2
-    local bottom = screenOriginY - screenHeight + 2
+    local left = screenOriginX + border
+    local right = screenOriginX + screenWidth - border
+    local top = screenOriginY - border
+    local bottom = screenOriginY - screenHeight + border
 
     local indicatorX, indicatorY
 
@@ -1457,7 +1457,8 @@ function this.updateLocalMarkers(force)
         end
 
         if data.containerData.offscreen and (posX < panelFrameX1 or posX > panelFrameX2 or posY > panelFrameY1 or posY < panelFrameY2) then
-            local nx, ny = calculateOffscreenIndicator(posX, posY, localPanel.width, localPanel.height, -layoutOffsetX, -layoutOffsetY)
+            local border = this.activeMenu == "MenuMulti" and 3 or 5
+            local nx, ny = calculateOffscreenIndicator(posX, posY, localPanel.width, localPanel.height, -layoutOffsetX, -layoutOffsetY, border)
             posX = nx or posX
             posY = ny or posY
         elseif data.containerData.parent then
