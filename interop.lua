@@ -1,3 +1,4 @@
+include("diject.map_markers.entry")
 local markers = include("diject.map_markers.marker")
 
 local this = {}

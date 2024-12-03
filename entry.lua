@@ -1,8 +1,6 @@
 local objectCache = include("diject.map_markers.objectCache")
 local activeCells = include("diject.map_markers.activeCells")
 local markerLib = include("diject.map_markers.marker")
-local interop = include("diject.map_markers.interop")
-local log = include("diject.map_markers.utils.log")
 
 --- @param e loadedEventData
 local function loadedCallback(e)
@@ -10,7 +8,11 @@ local function loadedCallback(e)
         markerLib.init()
     end
 end
-event.register(tes3.event.loaded, loadedCallback, {priority = 99999})
+event.register(tes3.event.loaded, loadedCallback, {priority = 8277})
+
+if tes3.player then
+    markerLib.init()
+end
 
 --- @param e loadEventData
 local function loadCallback(e)
@@ -54,6 +56,13 @@ end
 
 event.register(tes3.event.uiActivated, menuMapActivated, {filter = "MenuMap", priority = -277})
 
+do
+    local menu = tes3ui.findMenu("MenuMap")
+    if menu then
+        menuMapActivated({claim = false, element = menu, newlyCreated = true})
+    end
+end
+
 --- @param e uiActivatedEventData
 local function menuMultiActivated(e)
     if not markerLib.isReady() then
@@ -66,6 +75,13 @@ local function menuMultiActivated(e)
 end
 
 event.register(tes3.event.uiActivated, menuMultiActivated, {filter = "MenuMulti"})
+
+do
+    local menu = tes3ui.findMenu("MenuMulti")
+    if menu then
+        menuMultiActivated({claim = false, element = menu, newlyCreated = true})
+    end
+end
 
 --- @param e simulatedEventData
 local function simulatedCallback(e)
