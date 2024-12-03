@@ -65,10 +65,6 @@ local lastWorldPaneHeight = 0
 ---@type table<string, markerLib.markerContainer>
 local worldMarkerPositionMap = {}
 
----@type table<string, tes3uiElement>
-local ingameMarkerMap = {}
-local ingameMarkerMapReady = false
-
 local last0XCoord = 0
 local last0YCoord = 0
 local menu00CoordinateSteadyCounter = 0
@@ -92,7 +88,6 @@ local is00CoordinateSteady = false
 ---@class markerLib.markerContainer
 ---@field items table<string, markerLib.activeLocalMarkerElement> by record id
 ---@field marker tes3uiElement?
----@field parent tes3uiElement? ingame marker that has been replaced
 ---@field markerData markerLib.markerData|nil for object id trackers
 ---@field ref mwseSafeObjectHandle|nil
 ---@field objectId string|nil
@@ -145,7 +140,6 @@ this.worldBounds = worldBounds
 ---@field temporary boolean|nil
 ---@field trackedRef mwseSafeObjectHandle|nil
 ---@field offscreen boolean|nil
----@field replace boolean|nil hide ingame static markers (like door markers) if this marker is close to them
 ---@field shortTerm boolean|nil if true, the marker will be deleted after the cell has changed
 
 ---@class markerLib.markerRecord
@@ -309,7 +303,6 @@ end
 ---@field temporary boolean|nil
 ---@field trackedRef tes3reference|nil
 ---@field trackOffscreen boolean|nil show the marker on the map menu border when it is offscreen
----@field replace boolean|nil hide ingame static markers (like door markers) if this marker is close to them
 ---@field shortTerm boolean|nil if true, the marker will be deleted after the interior flag for the player cell is changed, or after the interior cell is changed
 
 ---@param params markerLib.addLocalMarker.params
@@ -373,7 +366,6 @@ function this.addLocal(params)
         trackedRef = reference and tes3.makeSafeObjectHandle(reference),
         conditionFunc = params.conditionFunc,
         offscreen = params.trackOffscreen,
-        replace = params.replace,
         shortTerm = params.shortTerm,
     }
     this.localMap[cellNameLabel][id] = data
@@ -911,43 +903,6 @@ end
 
 -- ################################################################################################
 
-local function clearIngameMarkerMap()
-    table.clear(ingameMarkerMap)
-end
-
----@param localPane tes3uiElement
-local function buidIngameMarkerMap(localPane)
-    clearIngameMarkerMap()
-    for _, child in pairs(localPane.children) do
-        if child.name == "MenuMap_active_door" then
-            local mapId = tostring(math.floor(child.positionX / 3))..","..tostring(math.floor(child.positionY / 3))
-            ingameMarkerMap[mapId] = child
-        end
-    end
-    ingameMarkerMapReady = true
-end
-
----@param element tes3uiElement
----@return tes3uiElement|nil
-local function getNearestIngameElement(element)
-    local mapId = tostring(math.floor(element.positionX / 3))..","..tostring(math.floor(element.positionY / 3))
-    return ingameMarkerMap[mapId]
-end
-
----@return tes3uiElement|nil
-local function getNearIngameElementByCoord(positionX, positionY)
-    local mapId = tostring(math.floor(positionX / 3))..","..tostring(math.floor(positionY / 3))
-    return ingameMarkerMap[mapId]
-end
-
-function this.resetIngameMarkerMapFlag()
-    timer.delayOneFrame(function (e)
-        ingameMarkerMapReady = false
-    end)
-end
-
--- ################################################################################################
-
 local function buildLocalMarkerPosMap()
     table.clear(localMarkerPositionMap)
     for id, data in pairs(this.activeLocalMarkers) do
@@ -1203,24 +1158,9 @@ function this.createLocalMarkers()
                 if marker then
                     local id = getId()
 
-                    local parent
-                    if data.replace then
-                        if not ingameMarkerMapReady then
-                            buidIngameMarkerMap(localPane)
-                        end
-                        local parentElement = getNearestIngameElement(marker)
-                        if parentElement and parentElement.visible then
-                            parentElement.visible = false
-                            parent = parentElement
-                        else
-                            parent = {}
-                        end
-                    end
-
                     local pos = tes3vector3.new(position.x, position.y, position.z)
                     this.activeLocalMarkers[id] = {
                         marker = marker,
-                        parent = parent,
                         items = {},
                         position = pos,
                         lastZDiff = math.abs(pos.z - playerPos.z),
@@ -1312,9 +1252,6 @@ function this.updateLocalMarkers(force)
         end
 
         local function deleteMarker()
-            if data.parent then
-                data.parent.visible = true
-            end
             removeMarker(id, data.marker)
         end
 
@@ -1371,7 +1308,7 @@ function this.updateLocalMarkers(force)
 
         elseif activeCells.isCellActive(data.cell) then
 
-            local shouldUpdate = data.shouldUpdate or data.offscreen or data.parent or force
+            local shouldUpdate = data.shouldUpdate or data.offscreen or force
             data.shouldUpdate = false
             if shouldUpdate then goto action end
 
@@ -1461,21 +1398,6 @@ function this.updateLocalMarkers(force)
             local nx, ny = calculateOffscreenIndicator(posX, posY, localPanel.width, localPanel.height, -layoutOffsetX, -layoutOffsetY, border)
             posX = nx or posX
             posY = ny or posY
-        elseif data.containerData.parent then
-            local parent = data.containerData.parent
-            parent.visible = true
-
-            if not ingameMarkerMapReady then
-                buidIngameMarkerMap(localPane)
-            end
-
-            parent = getNearIngameElementByCoord(posX, posY)
-            if parent and parent.visible then
-                parent.visible = false
-                data.containerData.parent = parent
-            else
-                data.containerData.parent = {} ---@diagnostic disable-line: missing-fields
-            end
         end
 
         changeMarker(marker, posX, posY, force)
@@ -1686,9 +1608,6 @@ function this.reregisterLocal()
                 this.addLocalMarkerFromMarkerData(markerElement.markerData)
             end
         end
-        if data.parent then
-            data.parent.visible = true
-        end
     end
     clearLocalMarkerPosMap()
     table.clear(this.activeLocalMarkers)
@@ -1724,8 +1643,6 @@ function this.reset()
     lastPlayerMarkerTileY = nil
     localMarkerPositionMap = {}
     worldMarkerPositionMap = {}
-    ingameMarkerMap = {}
-    ingameMarkerMapReady = false
     last0XCoord = 0
     last0YCoord = 0
     menu00CoordinateSteadyCounter = 0
