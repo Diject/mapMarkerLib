@@ -71,6 +71,9 @@ local last0YCoord = 0
 local menu00CoordinateSteadyCounter = 0
 local is00CoordinateSteady = false
 
+local last0GridX = 0
+local last0GridY = 0
+
 
 ---@class markerLib.activeWorldMarkerContainer
 ---@field id string
@@ -196,6 +199,7 @@ end
 ---@field localMap tes3uiElement?
 ---@field localPanel tes3uiElement?
 ---@field localPane tes3uiElement?
+---@field localMapPane tes3uiElement?
 ---@field localPlayerMarker tes3uiElement?
 ---@field worldMap tes3uiElement?
 ---@field worldPane tes3uiElement?
@@ -204,6 +208,7 @@ end
 ---@field multiPane tes3uiElement?
 ---@field multiPlayerMarker tes3uiElement?
 ---@field multiMapLayout tes3uiElement?
+---@field multiMapPane tes3uiElement?
 ---@field uiExpZoomBar tes3uiElement?
 
 ---@type markerLib.menus
@@ -226,6 +231,8 @@ function this.initMapMenuInfo(menu)
     if not menuData.localPanel then return end
     menuData.localPane = menuData.localPanel:findChild("MenuMap_pane")
     if not menuData.localPane then return end
+    menuData.localMapPane = menuData.localPanel:findChild("MenuMap_map_pane")
+    if not menuData.localMapPane then return end
     menuData.localPlayerMarker = menuData.localPane:findChild("MenuMap_local_player")
     if not menuData.localPlayerMarker then return end
 
@@ -269,6 +276,8 @@ function this.initMultiMenuInfo(menu)
     if not menuData.multiPanel then return end
     menuData.multiPane = menuData.multiPanel:findChild("MenuMap_pane")
     if not menuData.multiPane then return end
+    menuData.multiMapPane = menuData.multiPane:findChild("MenuMap_map_pane")
+    if not menuData.multiMapPane then return end
     menuData.multiMapLayout = menuData.multiMap:findChild("MenuMap_layout")
     if not menuData.multiMapLayout then return end
     menuData.multiPlayerMarker = menuData.multiMap:findChild("MenuMap_local_player")
@@ -750,6 +759,7 @@ local function getLocalMenuLayout()
     local localPane
     local playerMarker
     local localPanel
+    local mapPane
     local layoutOffsetX = 0
     local layoutOffsetY = 0
 
@@ -757,11 +767,13 @@ local function getLocalMenuLayout()
         localPane = menuData.localPane
         playerMarker = menuData.localPlayerMarker
         localPanel = menuData.localPanel
+        mapPane = menuData.localMapPane
         layoutOffsetX = menuData.localPane.positionX
         layoutOffsetY = menuData.localPane.positionY
     elseif this.isMultiMenuInitialized and multiMenu.visible then ---@diagnostic disable-line: need-check-nil
         localPane = menuData.multiPane
         localPanel = menuData.multiPanel
+        mapPane = menuData.multiMapPane
         local mapLayout = menuData.multiMapLayout
         local plM = menuData.multiPlayerMarker
         playerMarker = {
@@ -772,7 +784,7 @@ local function getLocalMenuLayout()
         layoutOffsetY = menuData.multiMapLayout.positionY
     end
 
-    return localPane, playerMarker, localPanel, layoutOffsetX, layoutOffsetY
+    return localPane, playerMarker, localPanel, mapPane, layoutOffsetX, layoutOffsetY
 end
 
 
@@ -902,6 +914,18 @@ local function calcInterior00Coordinate(localPane, playerMarker, playerPos)
     return ret
 end
 
+---@param mapPane tes3uiElement
+local function calcGridOffset(mapPane)
+    local mapCell = mapPane:findChild("MenuMap_map_cell")
+    if mapCell then
+        local cell = mapCell:getPropertyObject("MenuMap_cell")
+        if cell then
+            last0GridX = cell.gridX - math.floor(mapCell.positionX / mapCell.width)
+            last0GridY = cell.gridY + math.floor(mapCell.positionY / mapCell.height)
+        end
+    end
+end
+
 -- ################################################################################################
 
 local function buildLocalMarkerPosMap()
@@ -973,9 +997,9 @@ end
 -- ################################################################################################
 
 function this.createLocalMarkers()
-    local localPane, playerMarker, localPanel = getLocalMenuLayout()
+    local localPane, playerMarker, localPanel, mapPane = getLocalMenuLayout()
 
-    if not localPane or not playerMarker then return end
+    if not localPane or not playerMarker or not mapPane then return end
 
     local player = tes3.player
     local playerPos = player.position
@@ -988,6 +1012,8 @@ function this.createLocalMarkers()
             calcInterirAxisAngle(playerCell)
             calcInterior00Coordinate(localPane, playerMarker, playerPos)
             is00CoordinateSteady = false
+        else
+            calcGridOffset(mapPane)
         end
 
         if lastCell.isInterior ~= playerCell.isInterior or playerCell.isInterior then
@@ -1023,12 +1049,6 @@ function this.createLocalMarkers()
     local widthPerPix = 8192 / tileWidth
     local heightPerPix = 8192 / tileHeight
 
-    local playerMarkerTileX = math.floor(math.abs(playerMarker.positionX) / tileWidth)
-    local playerMarkerTileY = math.floor(math.abs(playerMarker.positionY) / tileHeight)
-
-    local offsetX = playerMarkerTileX - 1
-    local offsetY = 1 - playerMarkerTileY
-
     ---@return number, number
     local function calcInteriorPos(position)
         local posXNorm = position.x * axisAngleCos - position.y * axisAngleSin
@@ -1041,8 +1061,8 @@ function this.createLocalMarkers()
     end
 
     local function calcExteriorPos(position)
-        local posX = (offsetX + 1 + math.floor(position.x / 8192) - math.floor(playerPos.x / 8192) + (position.x % 8192) / 8192) * tileWidth
-        local posY = -(-offsetY + 2 - (math.floor(position.y / 8192) - math.floor(playerPos.y / 8192) + (position.y % 8192) / 8192)) * tileHeight
+        local posX = (position.x / 8192 - last0GridX) * tileWidth
+        local posY = -(1 + -position.y / 8192 + last0GridY) * tileHeight
 
         return posX, posY
     end
@@ -1203,9 +1223,9 @@ function this.updateLocalMarkers(force)
     local playerPos = player.position
     local playerCell = player.cell
 
-    local localPane, playerMarker, localPanel, layoutOffsetX, layoutOffsetY = getLocalMenuLayout()
+    local localPane, playerMarker, localPanel, mapPane, layoutOffsetX, layoutOffsetY = getLocalMenuLayout()
 
-    if not localPane or not playerMarker or not localPanel then return end
+    if not localPane or not playerMarker or not localPanel or not mapPane then return end
 
     if lastLocalPaneWidth ~= localPane.width or lastLocalPaneHeight ~= localPane.height then
         force = true
@@ -1233,6 +1253,7 @@ function this.updateLocalMarkers(force)
         local playerMarkerTileY = math.floor(3 * math.abs(playerMarker.positionY) / localPane.height)
 
         if lastPlayerMarkerTileX ~= playerMarkerTileX or lastPlayerMarkerTileY ~= playerMarkerTileY then
+            calcGridOffset(mapPane)
             lastPlayerMarkerTileX = playerMarkerTileX
             lastPlayerMarkerTileY = playerMarkerTileY
             force = true
@@ -1365,12 +1386,6 @@ function this.updateLocalMarkers(force)
     local widthPerPix = 8192 / tileWidth
     local heightPerPix = 8192 / tileHeight
 
-    local playerMarkerTileX = math.floor(math.abs(playerMarker.positionX) / tileWidth)
-    local playerMarkerTileY = math.floor(math.abs(playerMarker.positionY) / tileHeight)
-
-    local offsetX = playerMarkerTileX - 1
-    local offsetY = 1 - playerMarkerTileY
-
     local panelFrameX1 = -layoutOffsetX
     local panelFrameX2 = -layoutOffsetX + localPanel.width
     local panelFrameY1 = -layoutOffsetY
@@ -1390,8 +1405,8 @@ function this.updateLocalMarkers(force)
             posX = interior0PointPositionX + posXNorm / widthPerPix
             posY = interior0PointPositionY - posYNorm / heightPerPix
         else
-            posX = (offsetX + 1 + math.floor(pos.x / 8192) - math.floor(playerPos.x / 8192) + (pos.x % 8192) / 8192) * tileWidth
-            posY = -(-offsetY + 2 - (math.floor(pos.y / 8192) - math.floor(playerPos.y / 8192) + (pos.y % 8192) / 8192)) * tileHeight
+            posX = (pos.x / 8192 - last0GridX) * tileWidth
+            posY = -(1 + -pos.y / 8192 + last0GridY) * tileHeight
         end
 
         if data.containerData.offscreen and (posX < panelFrameX1 or posX > panelFrameX2 or posY > panelFrameY1 or posY < panelFrameY2) then
@@ -1646,6 +1661,8 @@ function this.reset()
     worldMarkerPositionMap = {}
     last0XCoord = 0
     last0YCoord = 0
+    last0GridX = 0
+    last0GridY = 0
     menu00CoordinateSteadyCounter = 0
     is00CoordinateSteady = false
 
