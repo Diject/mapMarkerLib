@@ -1,6 +1,6 @@
 local objectCache = include("diject.map_markers.objectCache")
 local activeCells = include("diject.map_markers.activeCells")
-local log = include("diject.map_markers.utils.log")
+local log = include("diject.map_markers.utils.log").log
 
 local storageName = "markers_byDiject"
 
@@ -37,7 +37,8 @@ this.shouldAddWorld = false
 
 this.shouldUpdateWorld = false
 
-this.updateInterval = 0.05
+this.minDelayBetweenUpdates = 0.01 -- only for MenuMulti
+this.updateInterval = 0.10
 this.lastLocalUpdate = 0
 this.lastWorldUpdate = 0
 

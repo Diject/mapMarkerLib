@@ -10,7 +10,12 @@ local function logTable(table, prefix)
     end
 end
 
-return function(...)
+local this = {}
+
+this.enabled = true
+
+function this.log(...)
+    if not this.enabled then return end
     local args = {...}
     local s = modLabel.."["..tostring(os.time()).."] "
     for _, var in pairs(args) do
@@ -23,3 +28,5 @@ return function(...)
         end
     end
 end
+
+return this
