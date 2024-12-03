@@ -512,6 +512,8 @@ function this.addRecord(id, params)
 
     this.records[id] = record
 
+    log("record added,", id)
+
     return id
 end
 
@@ -523,6 +525,7 @@ function this.removeRecord(id)
     if rec then
         this.markersToRemove[id] = true
         this.records[id] = nil
+        log("record removed,", id)
         return true
     end
     return false
