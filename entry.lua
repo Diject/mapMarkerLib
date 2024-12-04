@@ -36,7 +36,7 @@ local function menuMapActivated(e)
     local menu = e.element
     markerLib.initMapMenuInfo(menu)
 
-    menu:getTopLevelMenu():register(tes3.uiEvent.preUpdate, function (e1)
+    menu:getTopLevelMenu():registerAfter(tes3.uiEvent.update, function (e1)
         if not markerLib.isMapMenuInitialized then return end
 
         if markerLib.menu.localMap.visible then
@@ -73,7 +73,7 @@ local function menuMultiActivated(e)
     local menu = e.element
     markerLib.initMultiMenuInfo(menu)
 
-    menu:getTopLevelMenu():register(tes3.uiEvent.preUpdate, function (e1)
+    menu:getTopLevelMenu():registerAfter(tes3.uiEvent.update, function (e1)
         if not markerLib.isMultiMenuInitialized then return end
 
         if markerLib.menu.multiMap.visible and os.clock() - markerLib.lastLocalUpdate > markerLib.minDelayBetweenUpdates then

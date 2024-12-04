@@ -1410,7 +1410,7 @@ function this.updateLocalMarkers(force)
         end
 
         if data.containerData.offscreen and (posX < panelFrameX1 or posX > panelFrameX2 or posY > panelFrameY1 or posY < panelFrameY2) then
-            local border = this.activeMenu == "MenuMulti" and 3 or 5
+            local border = this.activeMenu == "MenuMulti" and 4 or 6
             local nx, ny = calculateOffscreenIndicator(posX, posY, localPanel.width, localPanel.height, -layoutOffsetX, -layoutOffsetY, border)
             posX = nx or posX
             posY = ny or posY
