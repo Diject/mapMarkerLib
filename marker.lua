@@ -68,8 +68,8 @@ local worldMarkerPositionMap = {}
 
 local last0XCoord = 0
 local last0YCoord = 0
-local menu00CoordinateSteadyCounter = 0
-local is00CoordinateSteady = false
+local menuSteadyCounter = 0
+local isMenuSteady = false
 
 local last0GridX = 0
 local last0GridY = 0
@@ -1011,7 +1011,7 @@ function this.createLocalMarkers()
         if playerCell.isInterior then
             calcInterirAxisAngle(playerCell)
             calcInterior00Coordinate(localPane, playerMarker, playerPos)
-            is00CoordinateSteady = false
+            isMenuSteady = false
         else
             calcGridOffset(mapPane)
         end
@@ -1232,19 +1232,22 @@ function this.updateLocalMarkers(force)
         lastLocalPaneWidth = localPane.width
         lastLocalPaneHeight = localPane.height
 
-        calcInterior00Coordinate(localPane, playerMarker, playerPos)
-        is00CoordinateSteady = false
+        if playerCell.isInterior then
+            calcInterior00Coordinate(localPane, playerMarker, playerPos)
+        end
+        isMenuSteady = false
 
-    elseif not is00CoordinateSteady then
-        if calcInterior00Coordinate(localPane, playerMarker, playerPos) then
-            menu00CoordinateSteadyCounter = 0
+    elseif not isMenuSteady then
+        force = true -- update markers to move them on top
+        if playerCell.isInterior and calcInterior00Coordinate(localPane, playerMarker, playerPos) then
+            menuSteadyCounter = 0
         else
-            menu00CoordinateSteadyCounter = menu00CoordinateSteadyCounter + 1
+            menuSteadyCounter = menuSteadyCounter + 1
         end
 
-        if menu00CoordinateSteadyCounter >= 8 then
-            menu00CoordinateSteadyCounter = 0
-            is00CoordinateSteady = true
+        if menuSteadyCounter >= 8 then
+            menuSteadyCounter = 0
+            isMenuSteady = true
         end
     end
 
@@ -1663,8 +1666,8 @@ function this.reset()
     last0YCoord = 0
     last0GridX = 0
     last0GridY = 0
-    menu00CoordinateSteadyCounter = 0
-    is00CoordinateSteady = false
+    menuSteadyCounter = 0
+    isMenuSteady = false
 
     storageData = nil
     this.activeMenu = nil
