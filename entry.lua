@@ -17,6 +17,7 @@ end
 --- @param e loadEventData
 local function loadCallback(e)
     markerLib.reset()
+    objectCache.clear()
 end
 event.register(tes3.event.load, loadCallback)
 

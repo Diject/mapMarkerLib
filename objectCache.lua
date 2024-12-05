@@ -17,15 +17,21 @@ end
 
 ---@param ref tes3reference
 function this.removeRef(ref)
-    if not ref then return end
-
-    this.refsByObjectId[ref.baseObject.id][ref] = nil
+    if not ref or not ref.baseObject then return end
+    local arr = this.refsByObjectId[ref.baseObject.id]
+    if arr then
+        arr[ref] = nil
+    end
 end
 
 ---@param objectId string
 ---@return table<tes3reference, boolean>
 function this.getRefTable(objectId)
     return this.refsByObjectId[objectId] or {}
+end
+
+function this.clear()
+    this.refsByObjectId = {}
 end
 
 return this
