@@ -410,8 +410,8 @@ end
 
 ---@class markerLib.addWorldMarker.params
 ---@field record string|markerLib.worldMarkerOOP
----@field x number x coordinate of the marker
----@field y number y coordinate of the marker
+---@field x number world x coordinate
+---@field y number world y coordinate
 
 ---@param params markerLib.addWorldMarker.params
 ---@return string|nil ret returns marker id if added. Or nil if not
