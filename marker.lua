@@ -611,6 +611,7 @@ local function drawMarker(pane, x, y, record, position)
             block.autoWidth = true
             block.maxWidth = 350
             block.borderBottom = 3
+            block.childAlignX = 0.5
 
             blockCount = blockCount + 1
 
@@ -620,7 +621,7 @@ local function drawMarker(pane, x, y, record, position)
                 label.autoWidth = true
                 label.maxWidth = 350
                 label.wrapText = true
-                label.justifyText = tes3.justifyText.center
+                label.justifyText = tes3.justifyText.left
             end
 
             if rec.description then
