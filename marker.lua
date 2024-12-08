@@ -1677,7 +1677,6 @@ function this.reset()
     this.shouldAddWorld = false
     this.shouldUpdateWorld = false
 
-    this.updateInterval = 0.1
     this.lastLocalUpdate = 0
     this.lastWorldUpdate = 0
     this.zDifference = 256
