@@ -30,6 +30,8 @@ local allMapLabelName = "__all_map__"
 
 local this = {}
 
+this.enabled = true
+
 this.activeMenu = nil
 
 this.shouldAddLocal = false
@@ -1695,6 +1697,25 @@ function this.reset()
     this.localMap = nil
     this.records = nil
     this.world = nil
+end
+
+
+function this.flush()
+    for id, _ in pairs(this.localMap or {}) do
+        this.localMap[id] = nil
+    end
+    for id, _ in pairs(this.records or {}) do
+        this.records[id] = nil
+    end
+    for id, _ in pairs(this.world or {}) do
+        this.world[id] = nil
+    end
+    this.activeLocalMarkers = {}
+    this.activeWorldMarkers = {}
+    this.waitingToCreate_local = {}
+    this.waitingToCreate_world = {}
+    this.markersToRemove = {}
+    this.markerElementsToDelete = {}
 end
 
 
