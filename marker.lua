@@ -44,7 +44,7 @@ this.updateInterval = 0.10
 this.lastLocalUpdate = 0
 this.lastWorldUpdate = 0
 
-this.zDifference = 256
+this.zDifference = 200
 
 local storageData
 
