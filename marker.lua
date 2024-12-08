@@ -738,6 +738,14 @@ local function checkConditionsToRemoveMarkerElement(markerData, container)
         return true
     end
 
+    return false
+end
+
+---@param markerData markerLib.activeLocalMarkerElement
+---@param container markerLib.markerContainer
+---@return boolean|nil ret returns true if marker should to remove
+local function checkConditionsToHideMarkerElement(markerData, container)
+    if not markerData.itemId then return end
 
     if container.ref and markerData.itemId then
         local ref = container.ref:getObject()
@@ -746,8 +754,6 @@ local function checkConditionsToRemoveMarkerElement(markerData, container)
             return true
         end
     end
-
-    return false
 end
 
 
@@ -1296,19 +1302,32 @@ function this.updateLocalMarkers(force)
             local shouldUpdate = data.shouldUpdate or data.offscreen or force
             data.shouldUpdate = false
 
+            local visible = true
+
             local offscreen = false
+            local countToHide = 0
             for recordId, element in pairs(data.items) do
                 if checkConditionsToRemoveMarkerElement(element, data) then
                     data.items[recordId] = nil
                     shouldUpdate = true
                 else
+                    if checkConditionsToHideMarkerElement(element, data) then
+                        countToHide = countToHide + 1
+                    end
                     offscreen = offscreen or (element.markerData and element.markerData.offscreen)
                 end
             end
 
-            if table.size(data.items) == 0 then
+            local tableSize = table.size(data.items)
+            if tableSize == 0 then
                 deleteMarker()
                 goto continue
+            elseif tableSize <= countToHide then
+                visible = false
+            end
+
+            if data.marker.visible ~= visible then
+                shouldUpdate = true
             end
 
             data.offscreen = offscreen
@@ -1326,6 +1345,8 @@ function this.updateLocalMarkers(force)
             ::action::
 
             if not shouldUpdate then goto continue end
+
+            data.marker.visible = visible
 
             data.position.x = refPos.x
             data.position.y = refPos.y
