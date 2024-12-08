@@ -1607,7 +1607,7 @@ end
 
 ---@param ref tes3reference
 function this.tryAddMarkersForRef(ref)
-    local objectId = ref.baseObject.id
+    local objectId = ref.baseObject.id:lower()
     local dataByObjId = this.activeLocalMarkers[objectId]
     if dataByObjId then
         local markerData = dataByObjId.markerData
@@ -1702,16 +1702,29 @@ end
 function this.save()
     if not storageData then return end
 
+    for id, data in pairs(this.records or {}) do
+        if this.markersToRemove[id] then
+            this.records[id] = nil
+        end
+    end
+
     storageData.map = {}
 
-    for cellId, cellData in pairs(this.localMap) do
+    for cellId, cellData in pairs(this.localMap or {}) do
         storageData.map[cellId] = {}
         local plCellData = storageData.map[cellId]
         for id, data in pairs(cellData) do
-            if data.temporary or data.trackedRef or data.conditionFunc then goto continue end
+            if this.markersToRemove[id] or this.markersToRemove[data.recordId] or not this.records[data.recordId] or
+                data.temporary or data.trackedRef or data.conditionFunc then goto continue end
             plCellData[id] = data
 
             ::continue::
+        end
+    end
+
+    for id, data in pairs(this.world) do
+        if this.markersToRemove[id] or this.markersToRemove[data.recordId] or not this.records[data.recordId] then
+            this.world[id] = nil
         end
     end
 end
