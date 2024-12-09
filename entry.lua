@@ -3,26 +3,7 @@ local activeCells = include("diject.map_markers.activeCells")
 local markerLib = include("diject.map_markers.marker")
 local mcm = include("diject.map_markers.mcm")
 
---- @param e loadedEventData
-local function loadedCallback(e)
-    if not markerLib.enabled then return end
-    if not markerLib.isReady() then
-        markerLib.init()
-    end
-end
-event.register(tes3.event.loaded, loadedCallback, {priority = 8277})
-
-if tes3.player and markerLib.enabled then
-    markerLib.init()
-end
-
---- @param e loadEventData
-local function loadCallback(e)
-    if not markerLib.enabled then return end
-    markerLib.reset()
-    objectCache.clear()
-end
-event.register(tes3.event.load, loadCallback)
+local cellBeforeLoad
 
 --- @param e saveEventData
 local function saveCallback(e)
@@ -163,6 +144,49 @@ local function cellChangedCallback(e)
     markerLib.registerMarkersForCell()
 end
 event.register(tes3.event.cellChanged, cellChangedCallback)
+
+--- @param e loadedEventData
+local function loadedCallback(e)
+    if not markerLib.enabled then return end
+    if not markerLib.isReady() then
+        markerLib.init()
+    end
+
+    if cellBeforeLoad and tes3.player.cell.editorName == cellBeforeLoad then
+        local cells
+        if tes3.player.cell.isInterior then
+            cells = {}
+            table.insert(cells, {cell = tes3.player.cell})
+        else
+            cells = tes3.dataHandler.exteriorCells
+        end
+        for _, dt in pairs(cells) do
+            cellActivatedCallback({cell = dt.cell}) ---@diagnostic disable-line: missing-fields
+            for ref in dt.cell:iterateReferences() do
+                referenceActivatedCallback({reference = ref}) ---@diagnostic disable-line: missing-fields
+            end
+        end
+    end
+end
+event.register(tes3.event.loaded, loadedCallback, {priority = 8277})
+
+if tes3.player and markerLib.enabled then
+    markerLib.init()
+end
+
+--- @param e loadEventData
+local function loadCallback(e)
+    if not markerLib.enabled then return end
+    markerLib.reset()
+    objectCache.clear()
+
+    if tes3.player then
+        cellBeforeLoad = tes3.player.cell.editorName
+    else
+        cellBeforeLoad = nil
+    end
+end
+event.register(tes3.event.load, loadCallback)
 
 --- @param e modConfigReadyEventData
 local function modConfigReadyCallback(e)
