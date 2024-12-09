@@ -399,6 +399,7 @@ function this.removeLocal(id, cellId)
     if marker then
         this.markersToRemove[id] = true
         cellData[id] = nil
+        log("local removed,", id)
         return true
     end
     return false
@@ -457,6 +458,7 @@ function this.removeWorld(id)
         this.shouldUpdateWorld = true
         this.markersToRemove[id] = true
         this.world[id] = nil
+        log("world removed, ", id)
         return true
     end
     return false
