@@ -531,6 +531,7 @@ function this.removeRecord(id)
     if rec then
         this.markersToRemove[id] = true
         this.records[id] = nil
+        this.shouldUpdateWorld = true
         log("record removed,", id)
         return true
     end
@@ -1367,7 +1368,6 @@ function this.updateLocalMarkers(force)
                 if checkConditionsToRemoveMarkerElement(element, data) then
                     data.items[recordId] = nil
                     shouldUpdate = true
-                    break
                 end
             end
 
@@ -1508,6 +1508,7 @@ function this.createWorldMarkers()
                     markerData = data,
                 }
                 parentData.shouldUpdate = true
+                this.shouldUpdateWorld = true
             end
         else
             local x, y = this.convertObjectPosToWorldMapPaneCoordinates(pos)
@@ -1529,6 +1530,7 @@ function this.createWorldMarkers()
                 }
                 marker:setLuaData("data", markerContainer)
                 addWorldMarkerPosData(pos, markerContainer)
+                this.shouldUpdateWorld = true
             end
         end
         ::continue::
@@ -1572,7 +1574,6 @@ function this.updateWorldMarkers(forceRedraw)
         for recordId, element in pairs(data.items) do
             if checkConditionsToRemoveMarkerElement(element, data) then
                 data.items[recordId] = nil
-                break
             end
         end
 
