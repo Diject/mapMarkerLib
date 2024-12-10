@@ -728,16 +728,24 @@ local function changeMarker(markerEl, x, y, updateImage)
 end
 
 
----@param markerData markerLib.activeLocalMarkerElement
+---@param markerDataElement markerLib.activeLocalMarkerElement
 ---@param container markerLib.markerContainer
 ---@return boolean|nil ret returns true if marker should to remove
-local function checkConditionsToRemoveMarkerElement(markerData, container)
+local function checkConditionsToRemoveMarkerElement(markerDataElement, container)
+    local markerData = markerDataElement.markerData
+    if not markerData then return false end
 
-    if this.markersToRemove[markerData.id] or this.markersToRemove[markerData.record.id] then
+    if this.markersToRemove[markerDataElement.id] or this.markersToRemove[markerDataElement.record.id] then
+        return true
+    elseif markerData.cellId then
+        if (not this.localMap[markerData.cellId] or not this.localMap[markerData.cellId][markerData.id]) then
+            return true
+        end
+    elseif not this.world[markerData.id] then
         return true
     end
 
-    if markerData.conditionFunc and not markerData.conditionFunc(markerData) then
+    if markerDataElement.conditionFunc and not markerDataElement.conditionFunc(markerDataElement) then
         return true
     end
 
