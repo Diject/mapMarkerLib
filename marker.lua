@@ -1754,15 +1754,16 @@ end
 function this.save()
     if not storageData then return end
 
-    for id, data in pairs(this.records or {}) do
+    for id, data in pairs(this.records) do
         if this.markersToRemove[id] then
             this.records[id] = nil
         end
     end
 
     storageData.map = {}
+    local localMap = table.deepcopy(this.localMap)
 
-    for cellId, cellData in pairs(this.localMap or {}) do
+    for cellId, cellData in pairs(localMap) do
         storageData.map[cellId] = {}
         local plCellData = storageData.map[cellId]
         for id, data in pairs(cellData) do
