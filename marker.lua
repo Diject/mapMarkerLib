@@ -46,6 +46,13 @@ this.lastWorldUpdate = 0
 
 this.zDifference = 200
 
+this.tile = {
+    width = 512,
+    height = 512,
+    x = 1,
+    y = 1,
+}
+
 local storageData
 
 local lastLocalPaneWidth
@@ -914,19 +921,44 @@ local function calcInterirAxisAngle(cell)
     axisAngleSin = math.sin(axisAngle)
 end
 
+local function calcTileParams()
+    local menuEl
+    local mapPane
+    if this.activeMenu == "MenuMapLocal" then
+        mapPane = this.menu.localMapPane
+        menuEl = mapPane:findChild("MenuMap_map_cell") ---@diagnostic disable-line: need-check-nil
+    elseif this.activeMenu == "MenuMapWorld" then
+        mapPane = this.menu.worldPane
+        menuEl = mapPane:findChild("MenuMap_map_cell") ---@diagnostic disable-line: need-check-nil
+    elseif this.activeMenu == "MenuMulti" then
+        mapPane = this.menu.multiMapPane
+        menuEl = mapPane:findChild("MenuMap_map_cell") ---@diagnostic disable-line: need-check-nil
+    end
+
+    if not menuEl or not mapPane then return end
+
+    this.tile.width = menuEl.width
+    this.tile.height = menuEl.height
+    this.tile.x = mapPane.width / menuEl.width
+    this.tile.y = mapPane.height / menuEl.height
+end
+
 ---@param localPane tes3uiElement
 ---@param playerMarker tes3uiElement
 ---@param playerPos tes3vector3
 ---@return boolean coordinatesHaveShanged
 local function calcInterior00Coordinate(localPane, playerMarker, playerPos)
+    calcTileParams()
     local xShift = -playerPos.x
     local yShift = playerPos.y
 
     local posXNorm = xShift * axisAngleCos + yShift * axisAngleSin
     local posYNorm = yShift * axisAngleCos - xShift * axisAngleSin
 
-    interior0PointPositionX = playerMarker.positionX + posXNorm / (8192 / localPane.width)
-    interior0PointPositionY = playerMarker.positionY - posYNorm / (8192 / localPane.height)
+    local tileParams = this.tile
+
+    interior0PointPositionX = playerMarker.positionX + posXNorm / (8192 / tileParams.width)
+    interior0PointPositionY = playerMarker.positionY - posYNorm / (8192 / tileParams.height)
 
     local ret = not (math.isclose(interior0PointPositionX, last0XCoord, 2) and math.isclose(interior0PointPositionY, last0YCoord, 2))
     last0XCoord = interior0PointPositionX
@@ -1056,15 +1088,8 @@ function this.createLocalMarkers()
 
     if table.size(this.waitingToCreate_local) == 0 then return end
 
-    local tileHeight
-    local tileWidth
-    if playerCell.isInterior then
-        tileHeight = localPane.height
-        tileWidth = localPane.width
-    else
-        tileHeight = localPane.height / 3
-        tileWidth = localPane.width / 3
-    end
+    local tileHeight = this.tile.height
+    local tileWidth = this.tile.width
 
     local widthPerPix = 8192 / tileWidth
     local heightPerPix = 8192 / tileHeight
@@ -1410,15 +1435,8 @@ function this.updateLocalMarkers(force)
 
     if table.size(markersToUpdate) == 0 then return end
 
-    local tileHeight
-    local tileWidth
-    if playerCell.isInterior then
-        tileHeight = localPane.height
-        tileWidth = localPane.width
-    else
-        tileHeight = localPane.height / 3
-        tileWidth = localPane.width / 3
-    end
+    local tileHeight = this.tile.height
+    local tileWidth = this.tile.width
 
     local widthPerPix = 8192 / tileWidth
     local heightPerPix = 8192 / tileHeight
