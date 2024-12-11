@@ -1139,6 +1139,7 @@ function this.createLocalMarkers()
                 end
 
             else
+                if ref.disabled then return end
                 local position = ref.position
 
                 local posX, posY
