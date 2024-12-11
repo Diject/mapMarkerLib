@@ -1732,7 +1732,7 @@ function this.reset()
 
     this.lastLocalUpdate = 0
     this.lastWorldUpdate = 0
-    this.zDifference = 256
+    this.zDifference = 200
 
     this.activeLocalMarkers = {}
     this.activeWorldMarkers = {}
