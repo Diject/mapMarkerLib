@@ -150,9 +150,9 @@ this.worldBounds = worldBounds
 ---@field objectId string|nil should be lowercase
 ---@field itemId string|nil should be lowercase
 ---@field conditionFunc (fun(data: markerLib.activeLocalMarkerElement):boolean)|nil
----@field temporary boolean|nil
+---@field temporary boolean|nil if true, the record will be deleted when the save is loaded
 ---@field trackedRef mwseSafeObjectHandle|nil
----@field offscreen boolean|nil
+---@field offscreen boolean|nil like off-screen indicator
 ---@field shortTerm boolean|nil if true, the marker will be deleted after the cell has changed
 
 ---@class markerLib.markerRecord
@@ -166,10 +166,11 @@ this.worldBounds = worldBounds
 ---@field textureShiftY integer|nil
 ---@field scale number|nil
 ---@field priority number|nil
----@field name string|nil
----@field description string|nil
+---@field name string|nil name on the tooltip
+---@field description string|nil description on the tooltip
 ---@field color number[]|nil {r, g, b} [0, 1]
----@field temporary boolean|nil
+---@field temporary boolean|nil if true, the record will be deleted when the save is loaded
+---@field zDifference number|nil difference in z-coordinates between the player and the tracked object to cause the icon to change to above|below one
 
 local function getId()
     local id = string.format("%.0f", storageData.id)
@@ -514,6 +515,7 @@ function this.addRecord(id, params)
     record.color = params.color
     record.scale = params.scale
     record.priority = params.priority or 0
+    record.zDifference = params.zDifference
 
     if not id then
         id = getId()
@@ -574,7 +576,8 @@ local function drawMarker(pane, x, y, record, position)
     if position and (record.pathBelow or record.pathAbove) then
         local playerPosZ = tes3.player.position.z
         local posDiff = position.z - playerPosZ
-        local imageType = (posDiff > this.zDifference) and "pathAbove" or ((posDiff < -this.zDifference) and "pathBelow" or "path")
+        local imageType = (posDiff > (record.zDifference or this.zDifference)) and "pathAbove" or
+            ((posDiff < -(record.zDifference or this.zDifference)) and "pathBelow" or "path")
         path = record[imageType]
     end
     if not path then
@@ -658,6 +661,19 @@ local function drawMarker(pane, x, y, record, position)
     return image
 end
 
+---@param arr table<string, markerLib.activeLocalMarkerElement>
+local function getMaxPriorityRecordByArr(arr)
+    local hPriorRec
+    local hPriority = -math.huge
+    for id, dt in pairs(arr) do
+        if dt.record.priority > hPriority then
+            hPriority = dt.record.priority
+            hPriorRec = dt.record
+        end
+    end
+    return hPriorRec
+end
+
 ---@param element tes3uiElement
 ---@return markerLib.markerRecord|nil
 local function getMaxPriorityRecord(element)
@@ -667,18 +683,7 @@ local function getMaxPriorityRecord(element)
     local luaData = element:getLuaData("data")
     if not luaData then return end
 
-    table.clear(tempRecordList)
-    for id, dt in pairs(luaData.items) do
-        table.insert(tempRecordList, dt.record)
-    end
-
-    table.sort(tempRecordList, function (a, b)
-        return (a.priority or 0) > (b.priority or 0)
-    end)
-
-    if #tempRecordList == 0 then return end
-
-    return tempRecordList[1]
+    return getMaxPriorityRecordByArr(luaData.items)
 end
 
 ---@param markerEl tes3uiElement
@@ -701,7 +706,8 @@ local function changeMarker(markerEl, x, y, updateImage)
     if position and position.z then
         local playerPosZ = tes3.player.position.z
         local posDiff = position.z - playerPosZ
-        imageType = (posDiff > this.zDifference) and "pathAbove" or ((posDiff < -this.zDifference) and "pathBelow" or "path")
+        imageType = (posDiff > (rec.zDifference or this.zDifference)) and "pathAbove" or
+            ((posDiff < -(rec.zDifference or this.zDifference)) and "pathBelow" or "path")
     else
         imageType = "path"
     end
@@ -1338,11 +1344,18 @@ function this.updateLocalMarkers(force)
 
             local offscreen = false
             local countToHide = 0
+            local hPriorityRecord
+            local hPriority = -math.huge
             for recordId, element in pairs(data.items) do
                 if checkConditionsToRemoveMarkerElement(element, data) then
                     data.items[recordId] = nil
                     shouldUpdate = true
                 else
+                    local priority = element.record.priority or 0
+                    if hPriority < priority then
+                        hPriority = priority
+                        hPriorityRecord = element.record
+                    end
                     if checkConditionsToHideMarkerElement(element, data) then
                         countToHide = countToHide + 1
                     end
@@ -1358,6 +1371,8 @@ function this.updateLocalMarkers(force)
                 visible = false
             end
 
+            local zDiffConst = (hPriorityRecord and hPriorityRecord.zDifference) or this.zDifference
+
             if data.marker.visible ~= visible then
                 shouldUpdate = true
             end
@@ -1369,8 +1384,8 @@ function this.updateLocalMarkers(force)
             if not math.isclose(data.position.x, refPos.x, positionDifferenceToUpdate) or
                     not math.isclose(data.position.y, refPos.y, positionDifferenceToUpdate) then
                 shouldUpdate = true
-            elseif not data.lastZDiff or math.floor(data.lastZDiff / this.zDifference) ~=
-                    math.floor(math.abs(refPos.z - playerPos.z) / this.zDifference) then
+            elseif not data.lastZDiff or math.floor(data.lastZDiff / zDiffConst) ~=
+                    math.floor(math.abs(refPos.z - playerPos.z) / zDiffConst) then
                 shouldUpdate = true
             end
 
@@ -1392,10 +1407,15 @@ function this.updateLocalMarkers(force)
             local shouldUpdate = data.shouldUpdate or data.offscreen or force
             data.shouldUpdate = false
 
+            local hPriority = -math.huge
+            local hPriorityRecord
             for recordId, element in pairs(data.items) do
                 if checkConditionsToRemoveMarkerElement(element, data) then
                     data.items[recordId] = nil
                     shouldUpdate = true
+                elseif hPriority < element.record.priority then
+                    hPriority = element.record.priority
+                    hPriorityRecord = element.record
                 end
             end
 
@@ -1405,10 +1425,12 @@ function this.updateLocalMarkers(force)
                 goto continue
             end
 
+            local zDiffConst = (hPriorityRecord and hPriorityRecord.zDifference) or this.zDifference
+
             if shouldUpdate then goto action end
 
-            if not data.lastZDiff or math.floor(data.lastZDiff / this.zDifference) ~=
-                    math.floor(math.abs(data.position.z - playerPos.z) / this.zDifference) then
+            if not data.lastZDiff or math.floor(data.lastZDiff / zDiffConst) ~=
+                    math.floor(math.abs(data.position.z - playerPos.z) / zDiffConst) then
                 shouldUpdate = true
             end
 
