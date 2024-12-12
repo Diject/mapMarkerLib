@@ -1124,19 +1124,16 @@ function this.createLocalMarkers()
             local parentData = this.activeLocalMarkers[ref]
 
             if parentData and parentData.marker then
-                if parentData.items[data.recordId] then
-                    return
-                else
-                    parentData.items[data.recordId] = {
-                        id = data.id,
-                        record = record,
-                        markerData = data,
-                        conditionFunc = data.conditionFunc,
-                        itemId = data.itemId
-                    }
-                    parentData.shouldUpdate = true
-                    parentData.offscreen = parentData.offscreen or data.offscreen
-                end
+
+                parentData.items[data.recordId] = {
+                    id = data.id,
+                    record = record,
+                    markerData = data,
+                    conditionFunc = data.conditionFunc,
+                    itemId = data.itemId
+                }
+                parentData.shouldUpdate = true
+                parentData.offscreen = parentData.offscreen or data.offscreen
 
             else
                 if ref.disabled then return end
@@ -1199,19 +1196,15 @@ function this.createLocalMarkers()
             local parentData = getLocalMarkerPosData(position)
 
             if parentData and parentData.marker then
-                if parentData.items[data.recordId] then
-                    goto continue
-                else
-                    parentData.items[data.recordId] = {
-                        id = data.id,
-                        record = record,
-                        markerData = data,
-                        conditionFunc = data.conditionFunc,
-                        itemId = data.itemId
-                    }
-                    parentData.shouldUpdate = true
-                    parentData.offscreen = parentData.offscreen or data.offscreen
-                end
+                parentData.items[data.recordId] = {
+                    id = data.id,
+                    record = record,
+                    markerData = data,
+                    conditionFunc = data.conditionFunc,
+                    itemId = data.itemId
+                }
+                parentData.shouldUpdate = true
+                parentData.offscreen = parentData.offscreen or data.offscreen
 
             else
                 local posX, posY
@@ -1246,6 +1239,8 @@ function this.createLocalMarkers()
                     }
                     marker:setLuaData("data", markerContainer)
                     addLocalMarkerPosData(position, markerContainer)
+
+                    log("marker icon has been created, id", id)
                 end
             end
         end
@@ -1396,7 +1391,6 @@ function this.updateLocalMarkers(force)
 
             local shouldUpdate = data.shouldUpdate or data.offscreen or force
             data.shouldUpdate = false
-            if shouldUpdate then goto action end
 
             for recordId, element in pairs(data.items) do
                 if checkConditionsToRemoveMarkerElement(element, data) then
@@ -1405,13 +1399,13 @@ function this.updateLocalMarkers(force)
                 end
             end
 
-            if shouldUpdate then goto action end
-
             if table.size(data.items) == 0 then
                 removeLocalMarkerPosData(data.position)
                 deleteMarker()
                 goto continue
             end
+
+            if shouldUpdate then goto action end
 
             if not data.lastZDiff or math.floor(data.lastZDiff / this.zDifference) ~=
                     math.floor(math.abs(data.position.z - playerPos.z) / this.zDifference) then
@@ -1427,7 +1421,9 @@ function this.updateLocalMarkers(force)
             markersToUpdate[data.marker] = {pos = data.position, containerData = data}
 
         else
-            removeLocalMarkerPosData(data.position)
+            if data.position then
+                removeLocalMarkerPosData(data.position)
+            end
             deleteMarker()
         end
 
@@ -1526,17 +1522,13 @@ function this.createWorldMarkers()
         local parentData = getWorldMarkerPosData(pos)
 
         if parentData then
-            if parentData.items[data.recordId] then
-                goto continue
-            else
-                parentData.items[data.recordId] = {
-                    id = data.id,
-                    record = record,
-                    markerData = data,
-                }
-                parentData.shouldUpdate = true
-                this.shouldUpdateWorld = true
-            end
+            parentData.items[data.recordId] = {
+                id = data.id,
+                record = record,
+                markerData = data,
+            }
+            parentData.shouldUpdate = true
+            this.shouldUpdateWorld = true
         else
             local x, y = this.convertObjectPosToWorldMapPaneCoordinates(pos)
 
@@ -1558,6 +1550,8 @@ function this.createWorldMarkers()
                 marker:setLuaData("data", markerContainer)
                 addWorldMarkerPosData(pos, markerContainer)
                 this.shouldUpdateWorld = true
+
+                log("marker icon has been created, id", data.id)
             end
         end
         ::continue::
