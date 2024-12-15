@@ -642,6 +642,7 @@ local function drawMarker(pane, x, y, record, position)
 
             if rec.name then
                 local label = block:createLabel{id = tooltipName, text = rec.name}
+                label.color = rec.color or label.color
                 label.autoHeight = true
                 label.autoWidth = true
                 label.maxWidth = 350
@@ -651,6 +652,7 @@ local function drawMarker(pane, x, y, record, position)
 
             if rec.description then
                 local label = block:createLabel{id = tooltipDescription, text = rec.description}
+                label.color = rec.color or label.color
                 label.autoHeight = true
                 label.autoWidth = true
                 label.maxWidth = 350
