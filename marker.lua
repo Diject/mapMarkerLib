@@ -131,7 +131,7 @@ this.markerElementsToDelete = {}
 
 ---@type table<string, table<string, markerLib.markerData>>
 this.localMap = nil
----@type table<string, table<string, markerLib.markerRecord>>
+---@type table<string, markerLib.markerRecord>
 this.records = nil
 ---@type table<string, markerLib.markerData>
 this.world = nil
@@ -185,15 +185,8 @@ function this.init()
     end
     storageData = player.data[storageName]
     this.localMap = table.deepcopy(storageData.map)
-    this.records = storageData.records
-    this.world = storageData.world
-
-    for id, record in pairs(this.records) do
-        if record.temporary then
-            this.markersToRemove[id] = true
-            this.records[id] = nil
-        end
-    end
+    this.records = table.deepcopy(storageData.records)
+    this.world = table.deepcopy(storageData.world)
 
     local uiexpCommon = include("UI Expansion.common")
     if uiexpCommon and uiexpCommon.config and uiexpCommon.config.components and
@@ -1789,11 +1782,15 @@ end
 function this.save()
     if not storageData then return end
 
-    for id, data in pairs(this.records) do
-        if this.markersToRemove[id] then
-            this.records[id] = nil
+    ---@type table<string, markerLib.markerRecord>
+    local records = table.deepcopy(this.records)
+    for id, data in pairs(records) do
+        if this.markersToRemove[id] or data.temporary then
+            records[id] = nil
         end
     end
+
+    local foundRecordIds = {}
 
     storageData.map = {}
     local localMap = table.deepcopy(this.localMap)
@@ -1802,19 +1799,34 @@ function this.save()
         storageData.map[cellId] = {}
         local plCellData = storageData.map[cellId]
         for id, data in pairs(cellData) do
-            if this.markersToRemove[id] or this.markersToRemove[data.recordId] or not this.records[data.recordId] or
+            if this.markersToRemove[id] or this.markersToRemove[data.recordId] or not records[data.recordId] or
                 data.temporary or data.trackedRef or data.conditionFunc then goto continue end
+
             plCellData[id] = data
+            foundRecordIds[data.recordId] = true
 
             ::continue::
         end
     end
 
-    for id, data in pairs(this.world) do
-        if this.markersToRemove[id] or this.markersToRemove[data.recordId] or not this.records[data.recordId] then
-            this.world[id] = nil
+    ---@type table<string, markerLib.markerData>
+    local world = table.deepcopy(this.world)
+    for id, data in pairs(world) do
+        if this.markersToRemove[id] or this.markersToRemove[data.recordId] or not records[data.recordId] or data.temporary then
+            world[id] = nil
+        else
+            foundRecordIds[data.recordId] = true
         end
     end
+
+    for recordId, _ in pairs(records) do
+        if not foundRecordIds[recordId] then
+            records[recordId] = nil
+        end
+    end
+
+    storageData.world = world
+    storageData.records = records
 end
 
 return this
