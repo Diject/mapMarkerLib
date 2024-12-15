@@ -525,6 +525,23 @@ function this.addRecord(id, params)
     return id
 end
 
+--- creates a new record with data from an existing
+---@param id string|nil
+---@return string|nil id, markerLib.markerRecord? data returns new record id and record data if successfuly duplicated. Or nil if not
+function this.duplicateRecord(id)
+    local record = this.getRecord(id)
+    if not record then return end
+
+    local new = table.deepcopy(record)
+    local newId = getId()
+
+    new.id = newId
+
+    this.records[newId] = new
+
+    return newId, this.records[newId]
+end
+
 ---@param id string record id
 ---@return boolean ret returns true if the record is found and removed. Or false if not found
 function this.removeRecord(id)

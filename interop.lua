@@ -43,6 +43,13 @@ function this.updateRecord(id, params)
     return markers.addRecord(id, params)
 end
 
+--- creates a new record with data from an existing
+---@param id string|nil
+---@return string|nil id, markerLib.markerRecord? data returns new record id and record data if successfuly duplicated. Or nil if not
+function this.duplicateRecord(id)
+    return markers.duplicateRecord(id)
+end
+
 ---Returns record data. You can change the data on the fly. Dangerous method!!!
 ---@param id string
 ---@return markerLib.markerRecord|nil
@@ -115,6 +122,19 @@ end
 function recordOOP:isExists()
     return markers.getRecord(self.id) and true or false
 end
+
+--- creates a new record with data from an existing
+---@return markerLib.recordOOP|nil ret returns new record if successfuly duplicated. Or nil if not
+function recordOOP:duplicate()
+    local newId = markers.duplicateRecord(self.id)
+    if not newId then return end
+
+    local newSelf = setmetatable({}, recordOOP)
+    newSelf.id = newId
+
+    return newSelf
+end
+
 
 
 this.localMarker = {}
