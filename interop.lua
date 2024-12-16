@@ -1,5 +1,5 @@
-include("diject.map_markers.entry")
-local markers = include("diject.map_markers.marker")
+include("diject.mapMarkerLib.entry")
+local markers = include("diject.mapMarkerLib.marker")
 
 local this = {}
 

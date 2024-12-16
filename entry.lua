@@ -1,7 +1,7 @@
-local objectCache = include("diject.map_markers.objectCache")
-local activeCells = include("diject.map_markers.activeCells")
-local markerLib = include("diject.map_markers.marker")
-local mcm = include("diject.map_markers.mcm")
+local objectCache = include("diject.mapMarkerLib.objectCache")
+local activeCells = include("diject.mapMarkerLib.activeCells")
+local markerLib = include("diject.mapMarkerLib.marker")
+local mcm = include("diject.mapMarkerLib.mcm")
 
 local cellBeforeLoad
 

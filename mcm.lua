@@ -1,4 +1,4 @@
-local markerLib = include("diject.map_markers.marker")
+local markerLib = include("diject.mapMarkerLib.marker")
 
 local configFileName = "mapMarkerLib_settings"
 

@@ -1,6 +1,6 @@
-local objectCache = include("diject.map_markers.objectCache")
-local activeCells = include("diject.map_markers.activeCells")
-local log = include("diject.map_markers.utils.log").log
+local objectCache = include("diject.mapMarkerLib.objectCache")
+local activeCells = include("diject.mapMarkerLib.activeCells")
+local log = include("diject.mapMarkerLib.utils.log").log
 
 local storageName = "markers_byDiject"
 
