@@ -15,10 +15,6 @@ event.register(tes3.event.save, saveCallback)
 --- @param e uiActivatedEventData
 local function menuMapActivated(e)
     if not markerLib.enabled then return end
-    if not markerLib.isReady() then
-        markerLib.init()
-        markerLib.registerWorld()
-    end
 
     local menu = e.element
     markerLib.initMapMenuInfo(menu)
@@ -53,10 +49,6 @@ end
 --- @param e uiActivatedEventData
 local function menuMultiActivated(e)
     if not markerLib.enabled then return end
-    if not markerLib.isReady() then
-        markerLib.init()
-        markerLib.registerWorld()
-    end
 
     local menu = e.element
     markerLib.initMultiMenuInfo(menu)
@@ -151,6 +143,8 @@ local function loadedCallback(e)
     if not markerLib.isReady() then
         markerLib.init()
     end
+
+    markerLib.registerWorld()
 
     if cellBeforeLoad and tes3.player.cell.editorName == cellBeforeLoad then
         local cells
