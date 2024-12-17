@@ -986,13 +986,15 @@ end
 
 ---@param mapPane tes3uiElement
 local function calcGridOffset(mapPane)
-    local mapCell = mapPane:findChild("MenuMap_map_cell")
-    if mapCell then
-        local cell = mapCell:getPropertyObject("MenuMap_cell")
-        if cell then
-            last0GridX = cell.gridX - math.floor(mapCell.positionX / mapCell.width)
-            last0GridY = cell.gridY + math.floor(mapCell.positionY / mapCell.height)
-        end
+    local layout = mapPane:findChild("MenuMap_map_layout")
+    if not layout then return end
+    local mapCell = layout:findChild("MenuMap_map_cell")
+    if not mapCell then return end
+
+    local cell = mapCell:getPropertyObject("MenuMap_cell")
+    if cell then
+        last0GridX = cell.gridX - math.floor(mapCell.positionX / mapCell.width)
+        last0GridY = cell.gridY - math.floor(layout.positionY / mapCell.height)
     end
 end
 
@@ -1082,8 +1084,6 @@ function this.createLocalMarkers()
             calcInterirAxisAngle(playerCell)
             calcInterior00Coordinate(localPane, playerMarker, playerPos)
             isMenuSteady = false
-        else
-            calcGridOffset(mapPane)
         end
 
         if lastCell.isInterior ~= playerCell.isInterior or playerCell.isInterior then
@@ -1099,6 +1099,10 @@ function this.createLocalMarkers()
 
     if this.activeMenu ~= lastActiveMenu or lastCell ~= playerCell then
         lastActiveMenu = this.activeMenu
+        if not playerCell.isInterior then
+            calcTileParams()
+            calcGridOffset(mapPane)
+        end
         this.reregisterLocal()
     end
 
@@ -1286,7 +1290,9 @@ function this.updateLocalMarkers(force)
 
     if not localPane or not playerMarker or not localPanel or not mapPane then return end
 
-    if lastLocalPaneWidth ~= localPane.width or lastLocalPaneHeight ~= localPane.height then
+    local paneSizeHasChanged = lastLocalPaneWidth ~= localPane.width or lastLocalPaneHeight ~= localPane.height
+
+    if paneSizeHasChanged then
         force = true
         lastLocalPaneWidth = localPane.width
         lastLocalPaneHeight = localPane.height
