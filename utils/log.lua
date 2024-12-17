@@ -12,7 +12,7 @@ end
 
 local this = {}
 
-this.enabled = true
+this.enabled = false
 
 function this.log(...)
     if not this.enabled then return end
