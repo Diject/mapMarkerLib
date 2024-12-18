@@ -168,6 +168,19 @@ if tes3.player and markerLib.enabled then
     markerLib.init()
 end
 
+--- @param e referenceActivatedEventData
+local function playerActivatedEvent(e)
+    if not markerLib.enabled then return end
+    if e.reference.baseObject.id == "player" then
+        if not markerLib.isReady() then
+            markerLib.init()
+            markerLib.registerWorld()
+        end
+        event.unregister(tes3.event.referenceActivated, playerActivatedEvent)
+    end
+end
+event.register(tes3.event.referenceActivated, playerActivatedEvent, {priority = 8277})
+
 --- @param e loadEventData
 local function loadCallback(e)
     if not markerLib.enabled then return end
@@ -178,6 +191,10 @@ local function loadCallback(e)
         cellBeforeLoad = tes3.player.cell.editorName
     else
         cellBeforeLoad = nil
+    end
+
+    if not event.isRegistered(tes3.event.referenceActivated, playerActivatedEvent, {priority = 8277}) then
+        event.register(tes3.event.referenceActivated, playerActivatedEvent, {priority = 8277})
     end
 end
 event.register(tes3.event.load, loadCallback)
