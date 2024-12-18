@@ -1,4 +1,5 @@
 local markerLib = include("diject.mapMarkerLib.marker")
+local logLib = include("diject.mapMarkerLib.utils.log")
 
 local configFileName = "mapMarkerLib_settings"
 
@@ -6,6 +7,7 @@ local this = {}
 
 local default = {
     enabled = markerLib.enabled,
+    logging = logLib.enabled,
     minDelayBetweenUpdates = math.round(markerLib.minDelayBetweenUpdates * 1000),
     updateInterval = math.round(markerLib.updateInterval * 1000),
 }
@@ -28,6 +30,7 @@ end
 
 local function callback(self)
     markerLib.enabled = this.config.enabled
+    logLib.enabled = this.config.logging
     markerLib.minDelayBetweenUpdates = this.config.minDelayBetweenUpdates / 1000
     markerLib.updateInterval = this.config.updateInterval / 1000
 end
@@ -40,6 +43,7 @@ function this.registerModConfig()
     local page = template:createPage{label = "Main"}
 
     page:createOnOffButton{configKey = "enabled", restartRequired = true, label = "Enable map markers."}
+    page:createOnOffButton{configKey = "logging", label = "Enable logging."}
 
     page:createSlider{min = 10, max = 1000, configKey = "updateInterval",
         label = "%s - Minimum interval for updating the map menu. Usually the map menu is updated automatically, but sometimes, for example when you are standing still, it is not - this option is for such cases. In milliseconds.",
