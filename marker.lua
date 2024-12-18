@@ -1094,6 +1094,12 @@ function this.createLocalMarkers()
                 if data.markerData and data.markerData.shortTerm then
                     this.removeLocal(data.markerData.id, data.markerData.cellId)
                     removeMarker(id, data.marker)
+                elseif data.items then
+                    for recordId, element in pairs(data.items) do
+                        if element.markerData and element.markerData.shortTerm then
+                            this.removeLocal(element.markerData.id, element.markerData.cellId)
+                        end
+                    end
                 end
             end
         end
