@@ -413,7 +413,7 @@ function this.getLocal(id, cellId)
 end
 
 ---@class markerLib.addWorldMarker.params
----@field record string|markerLib.worldMarkerOOP
+---@field record string|markerLib.recordOOP
 ---@field x number world x coordinate
 ---@field y number world y coordinate
 ---@field temporary boolean|nil if true, the marker will not be saved to the save file
