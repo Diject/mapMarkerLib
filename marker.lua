@@ -150,7 +150,7 @@ this.worldBounds = worldBounds
 ---@field objectId string|nil should be lowercase
 ---@field itemId string|nil should be lowercase
 ---@field conditionFunc (fun(data: markerLib.activeLocalMarkerElement):boolean)|nil
----@field temporary boolean|nil if true, the record will be deleted when the save is loaded
+---@field temporary boolean|nil if true, the marker will not be saved to the save file
 ---@field trackedRef mwseSafeObjectHandle|nil
 ---@field offscreen boolean|nil like off-screen indicator
 ---@field shortTerm boolean|nil if true, the marker will be deleted after the cell has changed
@@ -162,14 +162,14 @@ this.worldBounds = worldBounds
 ---@field pathBelow string|nil texture path relative to Data Files\Textures
 ---@field width integer|nil texture width
 ---@field height integer|nil texture height
----@field textureShiftX integer|nil
----@field textureShiftY integer|nil
+---@field textureShiftX integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift left, positive values shift right.* The value is applied after scaling
+---@field textureShiftY integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift down, positive values shift up.* The value is applied after scaling
 ---@field scale number|nil
 ---@field priority number|nil
 ---@field name string|nil name on the tooltip
 ---@field description string|nil description on the tooltip
 ---@field color number[]|nil {r, g, b} [0, 1]
----@field temporary boolean|nil if true, the record will be deleted when the save is loaded
+---@field temporary boolean|nil if true, the record will not be saved to the save file
 ---@field zDifference number|nil difference in z-coordinates between the player and the tracked object to cause the icon to change to above|below one
 
 local function getId()
@@ -308,13 +308,13 @@ end
 
 ---@class markerLib.addLocalMarker.params
 ---@field record string|markerLib.recordOOP
----@field position tes3vector3|{x : number, y : number, z : number}|nil
+---@field position tes3vector3|{x : number, y : number, z : number}|nil position to which the marker points
 ---@field cell string|tes3cell|nil should be nil if the cell is exterior
----@field objectId string|nil should be lowercase
----@field itemId string|nil should be lowercase
----@field conditionFunc (fun(data: markerLib.activeLocalMarkerElement):boolean)|nil
----@field temporary boolean|nil
----@field trackedRef tes3reference|nil
+---@field objectId string|nil object id to track. Should be lowercase
+---@field itemId string|nil id of the item in the inventory of the tracked object. If the item does not exist, the marker will be hidden. Should be lowercase
+---@field conditionFunc (fun(data: markerLib.activeLocalMarkerElement):boolean)|nil The value is not saved between game sessions
+---@field temporary boolean|nil if true, the marker will not be saved to the save file
+---@field trackedRef tes3reference|nil the reference that marker is tracking. The value is not saved between game sessions
 ---@field trackOffscreen boolean|nil show the marker on the map menu border when it is offscreen
 ---@field shortTerm boolean|nil if true, the marker will be deleted after the interior flag for the player cell is changed, or after the interior cell is changed
 
@@ -416,6 +416,7 @@ end
 ---@field record string|markerLib.worldMarkerOOP
 ---@field x number world x coordinate
 ---@field y number world y coordinate
+---@field temporary boolean|nil if true, the marker will not be saved to the save file
 
 ---@param params markerLib.addWorldMarker.params
 ---@return string|nil ret returns marker id if added. Or nil if not
@@ -438,6 +439,7 @@ function this.addWorld(params)
         recordId = recordId,
         id = id,
         markerId = id,
+        temporary = params.temporary,
     }
 
     this.world[id] = data
