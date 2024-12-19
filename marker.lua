@@ -178,12 +178,15 @@ local function getId()
     return id
 end
 
-function this.init()
-    local player = tes3.player
-    if not player.data[storageName] then
-        player.data[storageName] = {map = {}, world = {}, records = {}, id = 0}
+function this.init(playerRef)
+    if not playerRef then
+        playerRef = tes3.player
+        if not playerRef then return end
     end
-    storageData = player.data[storageName]
+    if not playerRef.data[storageName] then
+        playerRef.data[storageName] = {map = {}, world = {}, records = {}, id = 0}
+    end
+    storageData = playerRef.data[storageName]
     this.localMap = table.deepcopy(storageData.map)
     this.records = table.deepcopy(storageData.records)
     this.world = table.deepcopy(storageData.world)
