@@ -316,7 +316,7 @@ end
 ---@field temporary boolean|nil if true, the marker will not be saved to the save file
 ---@field trackedRef tes3reference|nil the reference that marker is tracking. The value is not saved between game sessions
 ---@field trackOffscreen boolean|nil show the marker on the map menu border when it is offscreen
----@field shortTerm boolean|nil if true, the marker will be deleted after the interior flag for the player cell is changed, or after the interior cell is changed
+---@field shortTerm boolean|nil if true, the marker will be removed if the player's cell changes from interior to interior, exterior to interior, or interior to exterior
 
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
