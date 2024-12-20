@@ -43,6 +43,7 @@ this.minDelayBetweenUpdates = 0.01 -- only for MenuMulti
 this.updateInterval = 0.10
 this.lastLocalUpdate = 0
 this.lastWorldUpdate = 0
+this.lastUpdate = 0
 
 this.zDifference = 200
 
@@ -1288,6 +1289,7 @@ end
 function this.updateLocalMarkers(force)
 
     this.lastLocalUpdate = os.clock()
+    this.lastUpdate = this.lastLocalUpdate
 
     if table.size(this.activeLocalMarkers) == 0 then
         return
@@ -1613,6 +1615,7 @@ end
 
 function this.updateWorldMarkers(forceRedraw)
     this.lastWorldUpdate = os.clock()
+    this.lastUpdate = this.lastWorldUpdate
 
     if table.size(this.activeWorldMarkers) == 0 then
         return
@@ -1777,7 +1780,7 @@ function this.reset()
 
     this.lastLocalUpdate = 0
     this.lastWorldUpdate = 0
-    this.zDifference = 200
+    this.lastUpdate = 0
 
     this.activeLocalMarkers = {}
     this.activeWorldMarkers = {}

@@ -161,6 +161,17 @@ local function loadedCallback(e)
             end
         end
     end
+
+    local watchdogTimer = timer.start({
+        duration = 0.5,
+        iterations = -1,
+        type = timer.real,
+        callback = function()
+            if os.clock() - markerLib.lastUpdate > 0.25 then
+                markerLib.updateMapMenu()
+            end
+        end
+    })
 end
 event.register(tes3.event.loaded, loadedCallback, {priority = 8277})
 
