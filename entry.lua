@@ -146,7 +146,7 @@ local function loadedCallback(e)
 
     markerLib.registerWorld()
 
-    if cellBeforeLoad and tes3.player.cell.editorName == cellBeforeLoad then
+    if cellBeforeLoad then
         local cells
         if tes3.player.cell.isInterior then
             cells = {}
