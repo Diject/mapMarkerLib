@@ -164,6 +164,8 @@ this.worldBounds = worldBounds
 ---@field trackedRef mwseSafeObjectHandle|nil
 ---@field offscreen boolean|nil like off-screen indicator
 ---@field shortTerm boolean|nil if true, the marker will be deleted after the cell has changed
+---@field group boolean|nil if false, the marker will not be grouped with other markers. Only for positional markers.
+---@field insertBefore boolean|nil if true, the marker will be inserted before other markers. Only for positional markers.
 
 ---@class markerLib.markerRecord
 ---@field id string|nil
@@ -330,6 +332,8 @@ end
 ---@field trackedRef tes3reference|nil the reference that marker is tracking. The value is not saved between game sessions
 ---@field trackOffscreen boolean|nil show the marker on the map menu border when it is offscreen
 ---@field shortTerm boolean|nil if true, the marker will be removed if the player's cell changes from interior to interior, exterior to interior, or interior to exterior
+---@field group boolean|nil Default: true. If false, the marker will not be grouped with other markers. Only for positional markers.
+---@field insertBefore boolean|nil if true, the marker will be inserted before other markers. Only for positional markers. Markers with this flag cannot be grouped with other markers
 
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
@@ -377,6 +381,8 @@ function this.addLocal(params)
         recordId = params.record.id
     end
 
+    local groupFlag = params.insertBefore == true and false or params.group
+
     local id = getId()
 
     ---@type markerLib.markerData
@@ -393,6 +399,8 @@ function this.addLocal(params)
         conditionFunc = params.conditionFunc,
         offscreen = params.trackOffscreen,
         shortTerm = params.shortTerm,
+        group = groupFlag,
+        insertBefore = params.insertBefore,
     }
     this.localMap[cellNameLabel][id] = data
 
@@ -430,6 +438,8 @@ end
 ---@field x number world x coordinate
 ---@field y number world y coordinate
 ---@field temporary boolean|nil if true, the marker will not be saved to the save file
+---@field group boolean|nil Default: true. If false, the marker will not be grouped with other markers. Only for positional markers.
+---@field insertBefore boolean|nil if true, the marker will be inserted before other markers. Only for positional markers. Markers with this flag cannot be grouped with other markers
 
 ---@param params markerLib.addWorldMarker.params
 ---@return string|nil ret returns marker id if added. Or nil if not
@@ -443,6 +453,8 @@ function this.addWorld(params)
         recordId = params.record.id
     end
 
+    local groupFlag = params.insertBefore == true and false or params.group
+
     local position = {x = params.x, y = params.y}
 
     local id = getId()
@@ -453,6 +465,8 @@ function this.addWorld(params)
         id = id,
         markerId = id,
         temporary = params.temporary,
+        group = groupFlag,
+        insertBefore = params.insertBefore,
     }
 
     this.world[id] = data
@@ -1236,7 +1250,7 @@ function this.createLocalMarkers()
         elseif data.position then -- for static markers
 
             local position = data.position
-            local parentData = getLocalMarkerPosData(position)
+            local parentData = not data.insertBefore and getLocalMarkerPosData(position)
 
             if parentData and parentData.marker then
                 parentData.items[data.recordId] = {
@@ -1282,6 +1296,10 @@ function this.createLocalMarkers()
                     }
                     marker:setLuaData("data", markerContainer)
                     addLocalMarkerPosData(position, markerContainer)
+
+                    if data.insertBefore then
+                        localPane:reorderChildren(1, marker, -1)
+                    end
 
                     log("marker icon has been created, id", id)
                 end
@@ -1568,6 +1586,7 @@ function this.createWorldMarkers()
     if table.size(this.waitingToCreate_world) == 0 then return end
 
     local worldPane = this.menu.worldPane
+    if not worldPane then return end
 
     for markerId, data in pairs(this.waitingToCreate_world) do
         local record = this.records[data.recordId]
@@ -1581,7 +1600,7 @@ function this.createWorldMarkers()
         end
 
         local pos = data.position
-        local parentData = getWorldMarkerPosData(pos)
+        local parentData = not data.insertBefore and getWorldMarkerPosData(pos)
 
         if parentData then
             parentData.items[data.recordId] = {
@@ -1611,6 +1630,11 @@ function this.createWorldMarkers()
                 }
                 marker:setLuaData("data", markerContainer)
                 addWorldMarkerPosData(pos, markerContainer)
+
+                if data.insertBefore then
+                    worldPane:reorderChildren(1, marker, -1)
+                end
+
                 this.shouldUpdateWorld = true
 
                 log("marker icon has been created, id", data.id)
