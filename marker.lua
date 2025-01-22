@@ -15,6 +15,7 @@ local minCellGridY = mcp_mapExpansion and -64 or -28
 local maxCellGridX = mcp_mapExpansion and 51 or 28
 local maxCellGridY = mcp_mapExpansion and 38 or 28
 
+---@type markerLib.worldBounds
 local worldBounds = {
     minX = minCellGridX,
     maxX = maxCellGridX,
@@ -85,6 +86,13 @@ local last0GridX = 0
 local last0GridY = 0
 
 
+---@class markerLib.worldBounds
+---@field minX number minimum grid x coordinate
+---@field maxX number maximum grid x coordinate
+---@field minY number minimum grid y coordinate
+---@field maxY number maximum grid y coordinate
+---@field cellResolution number size in pixels of a cell on the map
+
 ---@class markerLib.activeWorldMarkerContainer
 ---@field id string
 ---@field record markerLib.markerRecord
@@ -137,6 +145,7 @@ this.records = nil
 ---@type table<string, markerLib.markerData>
 this.world = nil
 
+---@type markerLib.worldBounds
 this.worldBounds = worldBounds
 
 ---@class markerLib.recordOOP

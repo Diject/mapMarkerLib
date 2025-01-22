@@ -79,6 +79,17 @@ function this.updateMapMenu()
     markers.updateMapMenu()
 end
 
+---Returns data about world bounds and pixel cell size
+---@return markerLib.worldBounds
+function this.getWorldBounds()
+    return table.copy(markers.worldBounds)
+end
+
+---Returns true if the lib is ready to work
+---@return boolean
+function this.isReady()
+    return markers.isReady()
+end
 
 -- OOP style
 
