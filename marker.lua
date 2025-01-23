@@ -177,6 +177,7 @@ this.worldBounds = worldBounds
 ---@field textureShiftX integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift left, positive values shift right.* The value is applied after scaling
 ---@field textureShiftY integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift down, positive values shift up.* The value is applied after scaling
 ---@field scale number|nil positive value - multiplier for the marker image, negative value - height for the marker image in game coordinates (width scale will be the same as height)
+---@field alpha number|nil transparency of the marker image [0, 1]
 ---@field priority number|nil
 ---@field name string|nil name on the tooltip
 ---@field description string|nil description on the tooltip
@@ -538,6 +539,7 @@ function this.addRecord(id, params)
     record.scale = params.scale
     record.priority = params.priority or 0
     record.zDifference = params.zDifference
+    record.alpha = params.alpha
 
     if not id then
         id = getId()
@@ -657,6 +659,7 @@ local function drawMarker(pane, x, y, record, position)
     image.positionX = math.round(x + xShift)
     image.positionY = math.round(y + yShift)
     image.color = record.color or {1, 1, 1}
+    image.alpha = record.alpha or 1
 
     image:setLuaData("imageRecordId", record)
 
@@ -801,6 +804,7 @@ local function changeMarker(markerEl, x, y, updateImage)
         markerEl.imageScaleX = scale
         markerEl.imageScaleY = scale
         markerEl.color = rec.color or {1, 1, 1}
+        markerEl.alpha = rec.alpha or 1
         ret = ret or true
     end
 
