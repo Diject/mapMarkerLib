@@ -3,6 +3,8 @@ local markers = include("diject.mapMarkerLib.marker")
 
 local this = {}
 
+this.version = 2 -- API version. *nil* for the first version
+
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
 function this.addLocalMarker(params)
