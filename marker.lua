@@ -176,7 +176,7 @@ this.worldBounds = worldBounds
 ---@field height integer|nil texture height
 ---@field textureShiftX integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift left, positive values shift right.* The value is applied after scaling
 ---@field textureShiftY integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift down, positive values shift up.* The value is applied after scaling
----@field scale number|nil
+---@field scale number|nil positive value - multiplier for the marker image, negative value - height for the marker image in game coordinates (width scale will be the same as height)
 ---@field priority number|nil
 ---@field name string|nil name on the tooltip
 ---@field description string|nil description on the tooltip
@@ -625,14 +625,37 @@ local function drawMarker(pane, x, y, record, position)
 
     local image = pane:createImage{id = markerLabelId, path = path}
 
+    local scale = record.scale or 1
+    if scale < 0 then
+        if this.activeMenu == "MenuMapWorld" then
+            scale = (this.worldBounds.cellResolution * -scale / 8192) / record.height
+        else
+            scale = -scale / 8192 * this.tile.height / record.height
+        end
+    end
+
+    local xShift
+    if record.scale < 0 then
+        xShift = (record.textureShiftX or record.width / 2) * scale
+    else
+        xShift = record.textureShiftX or -record.width / 2
+    end
+
+    local yShift
+    if record.scale < 0 then
+        yShift = (record.textureShiftY or record.height / 2) * scale
+    else
+        yShift = record.textureShiftY or record.height / 2
+    end
+
     image.autoHeight = true
     image.autoWidth = true
     image.absolutePosAlignX = -2
     image.absolutePosAlignY = -2
-    image.imageScaleX = record.scale or 1
-    image.imageScaleY = record.scale or 1
-    image.positionX = x + (record.textureShiftX or -record.width / 2)
-    image.positionY = y + (record.textureShiftY or record.height / 2)
+    image.imageScaleX = scale
+    image.imageScaleY = scale
+    image.positionX = math.round(x + xShift)
+    image.positionY = math.round(y + yShift)
     image.color = record.color or {1, 1, 1}
 
     image:setLuaData("imageRecordId", record)
@@ -766,15 +789,38 @@ local function changeMarker(markerEl, x, y, updateImage)
 
         markerEl:setLuaData("imageRecordId", rec.id)
 
-        markerEl.imageScaleX = rec.scale or 1
-        markerEl.imageScaleY = rec.scale or 1
+        local scale = rec.scale or 1
+        if scale < 0 then
+            if this.activeMenu == "MenuMapWorld" then
+                scale = (this.worldBounds.cellResolution * -scale / 8192) / rec.height
+            else
+                scale = -scale / 8192 * this.tile.height / rec.height
+            end
+        end
+
+        markerEl.imageScaleX = scale
+        markerEl.imageScaleY = scale
         markerEl.color = rec.color or {1, 1, 1}
         ret = ret or true
     end
 
     if x and y then
-        markerEl.positionX = math.round(x) + (rec.textureShiftX or -rec.width / 2)
-        markerEl.positionY = math.round(y) + (rec.textureShiftY or rec.height / 2)
+        local xShift
+        if rec.scale < 0 then
+            xShift = (rec.textureShiftX or rec.width / 2) * markerEl.imageScaleX
+        else
+            xShift = rec.textureShiftX or -rec.width / 2
+        end
+
+        local yShift
+        if rec.scale < 0 then
+            yShift = (rec.textureShiftY or rec.height / 2) * markerEl.imageScaleY
+        else
+            yShift = rec.textureShiftY or rec.height / 2
+        end
+
+        markerEl.positionX = math.round(x + xShift)
+        markerEl.positionY = math.round(y + yShift)
         ret = ret or true
     end
 
@@ -1250,7 +1296,7 @@ function this.createLocalMarkers()
         elseif data.position then -- for static markers
 
             local position = data.position
-            local parentData = not data.insertBefore and getLocalMarkerPosData(position)
+            local parentData = not data.group == false and getLocalMarkerPosData(position)
 
             if parentData and parentData.marker then
                 parentData.items[data.recordId] = {
@@ -1600,7 +1646,7 @@ function this.createWorldMarkers()
         end
 
         local pos = data.position
-        local parentData = not data.insertBefore and getWorldMarkerPosData(pos)
+        local parentData = not data.group == false and getWorldMarkerPosData(pos)
 
         if parentData then
             parentData.items[data.recordId] = {
