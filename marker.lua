@@ -48,6 +48,8 @@ this.lastUpdate = 0
 
 this.zDifference = 200
 
+this.currentWorldZoom = 2
+
 this.tile = {
     width = 512,
     height = 512,
@@ -604,6 +606,15 @@ function this.getCellData(cellName)
     end
 end
 
+--#################################################################################################
+
+local function calcNegativeScaleValue(scale, imageHeight)
+    if this.activeMenu == "MenuMapWorld" then
+        return (this.worldBounds.cellResolution * this.currentWorldZoom * -scale / 8192) / imageHeight
+    end
+
+    return -scale / 8192 * this.tile.height / imageHeight
+end
 
 local tempRecordList = {}
 ---@param pane tes3uiElement
@@ -629,11 +640,7 @@ local function drawMarker(pane, x, y, record, position)
 
     local scale = record.scale or 1
     if scale < 0 then
-        if this.activeMenu == "MenuMapWorld" then
-            scale = (this.worldBounds.cellResolution * -scale / 8192) / record.height
-        else
-            scale = -scale / 8192 * this.tile.height / record.height
-        end
+        scale = calcNegativeScaleValue(scale, record.height)
     end
 
     local xShift
@@ -794,11 +801,7 @@ local function changeMarker(markerEl, x, y, updateImage)
 
         local scale = rec.scale or 1
         if scale < 0 then
-            if this.activeMenu == "MenuMapWorld" then
-                scale = (this.worldBounds.cellResolution * -scale / 8192) / rec.height
-            else
-                scale = -scale / 8192 * this.tile.height / rec.height
-            end
+            scale = calcNegativeScaleValue(scale, rec.height)
         end
 
         markerEl.imageScaleX = scale
@@ -806,6 +809,11 @@ local function changeMarker(markerEl, x, y, updateImage)
         markerEl.color = rec.color or {1, 1, 1}
         markerEl.alpha = rec.alpha or 1
         ret = ret or true
+
+    elseif rec.scale and rec.scale < 0 then
+        local scale = calcNegativeScaleValue(rec.scale, rec.height)
+        markerEl.imageScaleX = scale
+        markerEl.imageScaleY = scale
     end
 
     if x and y then
@@ -1608,23 +1616,23 @@ end
 ---@return number x, number y
 function this.convertObjectPosToWorldMapPaneCoordinates(pos)
     local zoomBar = this.menu.uiExpZoomBar
-    local currentZoom = 2
+    this.currentWorldZoom = 2
     local xOffset = 4
     local yOffset = 4
     if zoomBar then
-        currentZoom = zoomBar and zoomBar:getPropertyInt("PartScrollBar_current") / 100 + 1.0
+        this.currentWorldZoom = zoomBar and zoomBar:getPropertyInt("PartScrollBar_current") / 100 + 1.0
         xOffset = 0
         yOffset = 0
     else
-        currentZoom = this.menu.worldPane.width / 512
+        this.currentWorldZoom = this.menu.worldPane.width / 512
         if mcp_mapExpansion then
             xOffset = 1
             yOffset = 2
         end
     end
 
-    local x = ((-this.worldBounds.minX + pos.x / 8192) * this.worldBounds.cellResolution + xOffset) * currentZoom
-    local y = ((-this.worldBounds.maxY - 1 + pos.y / 8192) * this.worldBounds.cellResolution - yOffset) * currentZoom
+    local x = ((-this.worldBounds.minX + pos.x / 8192) * this.worldBounds.cellResolution + xOffset) * this.currentWorldZoom
+    local y = ((-this.worldBounds.maxY - 1 + pos.y / 8192) * this.worldBounds.cellResolution - yOffset) * this.currentWorldZoom
 
     return x, y
 end
