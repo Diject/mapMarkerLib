@@ -27,9 +27,10 @@ local function menuMapActivated(e)
             markerLib.createLocalMarkers()
             markerLib.updateLocalMarkers()
         elseif markerLib.menu.worldMap.visible then
+            local redraw = markerLib.activeMenu ~= "MenuMapWorld"
             markerLib.activeMenu = "MenuMapWorld"
             markerLib.createWorldMarkers()
-            markerLib.updateWorldMarkers()
+            markerLib.updateWorldMarkers(redraw)
         end
         markerLib.removeDeletedMarkers()
     end)
