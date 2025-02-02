@@ -186,7 +186,6 @@ local function playerActivatedEvent(e)
     if e.reference.baseObject.id == "player" then
         if not markerLib.isReady() then
             markerLib.init(e.reference)
-            markerLib.registerWorld()
         end
         event.unregister(tes3.event.referenceActivated, playerActivatedEvent)
     end
