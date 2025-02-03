@@ -9,6 +9,8 @@ local tooltipBlock = "MarkerLib_Tooltip_Block"
 local tooltipName = "MarkerLib_Tooltip_Name"
 local tooltipDescription = "MarkerLib_Tooltip_Description"
 
+local doubleClickTime = 3
+
 local mcp_mapExpansion = tes3.hasCodePatchFeature(tes3.codePatchFeature.mapExpansionForTamrielRebuilt)
 local minCellGridX = mcp_mapExpansion and -51 or -28
 local minCellGridY = mcp_mapExpansion and -64 or -28
@@ -669,6 +671,43 @@ local function drawMarker(pane, x, y, record, position)
     image.alpha = record.alpha or 1
 
     image:setLuaData("imageRecordId", record)
+
+    image.consumeMouseEvents = true
+    local lastClickTime = 0
+    image:register(tes3.uiEvent.mouseClick, function (e)
+        local time = os.clock()
+        local doubleClickDetected = false
+        if time - lastClickTime < doubleClickTime then
+            lastClickTime = 0
+            doubleClickDetected = true
+        else
+            lastClickTime = os.clock()
+        end
+
+        if not doubleClickDetected then return end
+
+        ---@type markerLib.markerContainer
+        local luaData = e.source:getLuaData("data")
+        if not luaData then return end
+
+        tes3.messageBox{
+            message = string.format("Remove the marker?"),
+            buttons = { "Yes", "No" },
+            showInDialog = false,
+            callback = function (e1)
+                if e1.button == 0 then
+                    for _, markerItem in pairs(luaData.items or {}) do
+                        if markerItem.markerData.cellId then
+                            this.removeLocal(markerItem.markerData.id, markerItem.markerData.cellId)
+                        else
+                            this.removeWorld(markerItem.markerData.id)
+                        end
+                    end
+                    image:getTopLevelMenu():updateLayout()
+                end
+            end,
+        }
+    end)
 
     image:register(tes3.uiEvent.help, function (e)
         if not e.source then return end
