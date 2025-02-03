@@ -283,6 +283,7 @@ function this.initMapMenuInfo(menu)
     end
 
     this.isMapMenuInitialized = true
+    event.trigger("mapMarkerLib:initialized")
     return this.isMapMenuInitialized
 end
 
@@ -427,6 +428,8 @@ function this.removeLocal(id, cellId)
         this.markersToRemove[id] = true
         cellData[id] = nil
         log("local removed,", id)
+
+        event.trigger("mapMarkerLib:markerDataRemoved", {id = id, cellId = cellId, data = marker}, { filter = id })
         return true
     end
     return false
@@ -493,6 +496,7 @@ function this.removeWorld(id)
         this.shouldUpdateWorld = true
         this.markersToRemove[id] = true
         this.world[id] = nil
+        event.trigger("mapMarkerLib:markerDataRemoved", {id = id, data = marker}, { filter = id })
         log("world removed, ", id)
         return true
     end
@@ -586,6 +590,7 @@ function this.removeRecord(id)
         this.markersToRemove[id] = true
         this.records[id] = nil
         this.shouldUpdateWorld = true
+        event.trigger("mapMarkerLib:recordDataRemoved", {id = id, data = rec}, { filter = id })
         log("record removed,", id)
         return true
     end
