@@ -317,7 +317,7 @@ end
 
 function this.isReady()
     if not this.localMap or not this.records or not this.world then return false end
-    return true
+    return this.isMultiMenuInitialized
 end
 
 local function getCellEditorName(x, y)
