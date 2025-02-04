@@ -114,6 +114,18 @@ function this.record.new(params)
     end
 end
 
+---@param id string record id
+---@return markerLib.recordOOP?
+function this.record.get(id)
+    if markers.getRecord(id) then
+        ---@class markerLib.recordOOP
+        local self = setmetatable({}, recordOOP)
+        self.id = id
+        return self
+    end
+    return nil
+end
+
 ---@return boolean? ret returns true if the record found and removed. Or false if it was removed early
 function recordOOP:remove()
     return markers.removeRecord(self.id)
@@ -148,6 +160,12 @@ function recordOOP:duplicate()
     return newSelf
 end
 
+--- returns record id
+---@return string recordId
+function recordOOP:getId()
+    return self.id
+end
+
 
 
 this.localMarker = {}
@@ -170,6 +188,19 @@ function this.localMarker.new(params)
     end
 end
 
+---@param id string
+---@param cellId string
+---@return markerLib.localMarkerOOP?
+function this.localMarker.get(id, cellId)
+    if markers.getLocal(id, cellId) then
+        local self = setmetatable({}, localMarkerOOP)
+        self.id = id
+        self.cellId = cellId
+        return self
+    end
+    return nil
+end
+
 ---@return boolean? ret returns true if the marker has been removed
 function localMarkerOOP:remove()
     return markers.removeLocal(self.id, self.cellId)
@@ -178,6 +209,12 @@ end
 ---@return boolean
 function localMarkerOOP:isExists()
     return markers.getLocal(self.id, self.cellId) and true or false
+end
+
+---@return string id
+---@return string cellId
+function localMarkerOOP:getId()
+    return self.id, self.cellId
 end
 
 
@@ -200,6 +237,17 @@ function this.worldMarker.new(params)
     end
 end
 
+---@param id string
+---@return markerLib.worldMarkerOOP?
+function this.worldMarker.get(id)
+    if markers.getWorld(id) then
+        local self = setmetatable({}, worldMarkerOOP)
+        self.id = id
+        return self
+    end
+    return nil
+end
+
 ---@return boolean? ret returns true if the marker is found and removed. Or false if not found
 function worldMarkerOOP:remove()
     return markers.removeWorld(self.id)
@@ -208,6 +256,11 @@ end
 ---@return boolean
 function worldMarkerOOP:isExists()
     return markers.getWorld(self.id) and true or false
+end
+
+---@return string
+function worldMarkerOOP:getId()
+    return self.id
 end
 
 
