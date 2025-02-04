@@ -208,7 +208,10 @@ function this.init(playerRef)
     this.records = table.deepcopy(storageData.records)
     this.world = table.deepcopy(storageData.world)
 
-    local uiexpCommon = include("UI Expansion.common")
+    local uiexpCommon
+    if tes3.isLuaModActive("UI Expansion") then
+        uiexpCommon = include("UI Expansion.common")
+    end
     if uiexpCommon and uiexpCommon.config and uiexpCommon.config.components and
             uiexpCommon.config.components.mapPlugin and uiexpCommon.config.mapConfig then
         this.worldBounds = uiexpCommon.config.mapConfig
