@@ -1355,7 +1355,7 @@ function this.createLocalMarkers()
         elseif data.position then -- for static markers
 
             local position = data.position
-            local parentData = not data.group == false and getLocalMarkerPosData(position)
+            local parentData = not (data.group == false) and getLocalMarkerPosData(position)
 
             if parentData and parentData.marker then
                 parentData.items[data.recordId] = {
@@ -1705,7 +1705,7 @@ function this.createWorldMarkers()
         end
 
         local pos = data.position
-        local parentData = not data.group == false and getWorldMarkerPosData(pos)
+        local parentData = not (data.group == false) and getWorldMarkerPosData(pos)
 
         if parentData then
             parentData.items[data.recordId] = {
