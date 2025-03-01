@@ -182,6 +182,7 @@ this.worldBounds = worldBounds
 ---@field textureShiftY integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift down, positive values shift up.* The value is applied after scaling
 ---@field scale number|nil positive value - multiplier for the marker image, negative value - height for the marker image in game coordinates (width scale will be the same as height)
 ---@field alpha number|nil transparency of the marker image [0, 1]
+---@field hide boolean|nil
 ---@field priority number|nil
 ---@field name string|nil name on the tooltip
 ---@field description string|nil description on the tooltip
@@ -648,6 +649,8 @@ local function drawMarker(pane, x, y, record, position)
 
     local image = pane:createImage{id = markerLabelId, path = path}
 
+    if record.hide == true then image.visible = false end
+
     local scale = record.scale or 1
     if scale < 0 then
         scale = calcNegativeScaleValue(scale, record.height)
@@ -881,6 +884,11 @@ local function changeMarker(markerEl, x, y, updateImage)
         markerEl.positionX = math.round(x + xShift)
         markerEl.positionY = math.round(y + yShift)
         ret = ret or true
+    end
+
+    local visible = (markerEl:getLuaData("visible") or true) and not (rec.hide or false)
+    if markerEl.visible ~= visible then
+        markerEl.visible = visible
     end
 
     return ret
@@ -1556,7 +1564,7 @@ function this.updateLocalMarkers(force)
 
             if not shouldUpdate then goto continue end
 
-            data.marker.visible = visible
+            data.marker:setLuaData("visible", visible)
 
             data.position.x = refPos.x
             data.position.y = refPos.y

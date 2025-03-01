@@ -3,7 +3,7 @@ local markers = include("diject.mapMarkerLib.marker")
 
 local this = {}
 
-this.version = 2 -- API version. *nil* for the first version
+this.version = 3 -- API version. *nil* for the first version
 
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
@@ -77,6 +77,13 @@ function this.updateLocalMarkers(updateImages)
     markers.updateLocalMarkers(updateImages)
 end
 
+---Updates all markers
+---@param force boolean|nil if true, all markers will be forced to update, even if they should not be
+function this.updateMarkers(force)
+    this.updateLocalMarkers(force)
+    this.updateWorldMarkers(force)
+end
+
 function this.updateMapMenu()
     markers.updateMapMenu()
 end
@@ -124,6 +131,14 @@ function this.record.get(id)
         return self
     end
     return nil
+end
+
+---Hides or shows all markers with this record. Requires updateMarkers(true) to apply changes
+---@param value boolean? default: *true*. true - hide all markers with this record. false - show all markers with this record
+---@return boolean? ret returns true if the record found and removed. Or false if it was removed early
+function recordOOP:hide(value)
+    if value == nil then value = true end
+    markers.getRecord(self.id).hide = value
 end
 
 ---@return boolean? ret returns true if the record found and removed. Or false if it was removed early
