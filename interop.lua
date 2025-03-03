@@ -5,6 +5,26 @@ local this = {}
 
 this.version = 3 -- API version. *nil* for the first version
 
+this.event = {
+    initialized = "mapMarkerLib:initialized",
+    markerRemoved = "mapMarkerLib:markerDataRemoved",
+    recordRemoved = "mapMarkerLib:recordDataRemoved"
+}
+
+---@class markerLib.event.markerDataRemoved.params
+---@field id string
+---@field cellId string?
+---@field data markerLib.markerData
+
+---@class markerLib.event.recordDataRemoved.params
+---@field id string
+---@field data markerLib.markerRecord
+
+---@class eventlib
+---@field register fun(eventId: '"mapMarkerLib:initialized"', callback: (fun(): boolean?), options: nil)
+---@field register fun(eventId: '"mapMarkerLib:markerDataRemoved"', callback: (fun(e: markerLib.event.markerDataRemoved.params): boolean?), options: {filter : string}?)
+---@field register fun(eventId: '"mapMarkerLib:recordDataRemoved"', callback: (fun(e: markerLib.event.recordDataRemoved.params): boolean?), options: {filter : string}?)
+
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
 function this.addLocalMarker(params)
