@@ -161,6 +161,12 @@ function recordOOP:hide(value)
     markers.getRecord(self.id).hide = value
 end
 
+---Registers a callback function that will be called when a marker with the record is clicked. Returning false will prevent any lower priority callbacks on the same marker from being called
+---@param func fun(e: markerLib.markerRecord.onClickCallbackData):boolean?
+function recordOOP:registerOnClick(func)
+    markers.getRecord(self.id).onClickCallback = func
+end
+
 ---@return boolean? ret returns true if the record found and removed. Or false if it was removed early
 function recordOOP:remove()
     return markers.removeRecord(self.id)

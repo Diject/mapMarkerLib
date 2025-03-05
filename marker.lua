@@ -152,8 +152,11 @@ this.world = nil
 ---@type markerLib.worldBounds
 this.worldBounds = worldBounds
 
----@class markerLib.recordOOP
----@
+---@class markerLib.markerRecord.onClickCallbackData
+---@field topRecord markerLib.markerRecord
+---@field record markerLib.markerRecord
+---@field marker tes3uiElement
+---@field data markerLib.markerContainer?
 
 ---@class markerLib.markerData
 ---@field recordId string recordId
@@ -189,6 +192,7 @@ this.worldBounds = worldBounds
 ---@field color number[]|nil {r, g, b} [0, 1]
 ---@field temporary boolean|nil if true, the record will not be saved to the save file
 ---@field zDifference number|nil difference in z-coordinates between the player and the tracked object to cause the icon to change to above|below one
+---@field onClickCallback (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
 
 local function getId()
     local id = string.format("%.0f", storageData.id)
@@ -553,6 +557,8 @@ function this.addRecord(id, params)
     record.zDifference = params.zDifference
     record.alpha = params.alpha
 
+    record.onClickCallback = params.onClickCallback
+
     if not id then
         id = getId()
     elseif not this.records[id] then
@@ -619,6 +625,27 @@ end
 
 --#################################################################################################
 
+local tempRecordList = {}
+
+---@return markerLib.markerRecord[]?
+local function getSortedRecordList(element)
+    if not element then return end
+    ---@type markerLib.markerContainer
+    local luaData = element:getLuaData("data")
+    if not luaData then return end
+
+    table.clear(tempRecordList)
+    for id, dt in pairs(luaData.items) do
+        table.insert(tempRecordList, dt.record)
+    end
+
+    table.sort(tempRecordList, function (a, b)
+        return (a.priority or 0) > (b.priority or 0)
+    end)
+
+    return tempRecordList
+end
+
 local function calcNegativeScaleValue(scale, imageHeight)
     if this.activeMenu == "MenuMapWorld" then
         return (this.worldBounds.cellResolution * this.currentWorldZoom * -scale / 8192) / imageHeight
@@ -627,7 +654,6 @@ local function calcNegativeScaleValue(scale, imageHeight)
     return -scale / 8192 * this.tile.height / imageHeight
 end
 
-local tempRecordList = {}
 ---@param pane tes3uiElement
 ---@param record markerLib.markerRecord
 ---@param position {z : number}|tes3vector3|nil position of the tracked object
@@ -684,56 +710,66 @@ local function drawMarker(pane, x, y, record, position)
     image:setLuaData("imageRecordId", record)
 
     image.consumeMouseEvents = true
+
+    local function onClickCallbacks(element)
+        local recordList = getSortedRecordList(element)
+        if not recordList then return end
+
+        for i, rec in ipairs(recordList) do
+            if rec.onClickCallback and
+                    rec.onClickCallback{marker = element, record = rec, topRecord = recordList[1], data = element:getLuaData("data")} == false then
+                break;
+            end
+        end
+    end
+
     local lastClickTime = 0
-    image:register(tes3.uiEvent.mouseClick, function (e)
-        local time = os.clock()
-        local doubleClickDetected = false
-        if time - lastClickTime < doubleClickTime then
-            lastClickTime = 0
-            doubleClickDetected = true
-        else
-            lastClickTime = os.clock()
+    image:registerAfter(tes3.uiEvent.mouseClick, function (e)
+
+        -- code to remove markers by doubleclick
+        if tes3.worldController.inputController:isAltDown() then
+            local time = os.clock()
+            local doubleClickDetected = false
+            if time - lastClickTime < doubleClickTime then
+                lastClickTime = 0
+                doubleClickDetected = true
+            else
+                lastClickTime = os.clock()
+            end
+
+            if not doubleClickDetected then goto next end
+
+            ---@type markerLib.markerContainer
+            local luaData = e.source:getLuaData("data")
+            if not luaData then return end
+
+            tes3.messageBox{
+                message = string.format("Remove the marker?"),
+                buttons = { "Yes", "No" },
+                showInDialog = false,
+                callback = function (e1)
+                    if e1.button == 0 then
+                        for _, markerItem in pairs(luaData.items or {}) do
+                            if markerItem.markerData.cellId then
+                                this.removeLocal(markerItem.markerData.id, markerItem.markerData.cellId)
+                            else
+                                this.removeWorld(markerItem.markerData.id)
+                            end
+                        end
+                        image:getTopLevelMenu():updateLayout()
+                    end
+                end,
+            }
         end
 
-        if not doubleClickDetected then return end
-
-        ---@type markerLib.markerContainer
-        local luaData = e.source:getLuaData("data")
-        if not luaData then return end
-
-        tes3.messageBox{
-            message = string.format("Remove the marker?"),
-            buttons = { "Yes", "No" },
-            showInDialog = false,
-            callback = function (e1)
-                if e1.button == 0 then
-                    for _, markerItem in pairs(luaData.items or {}) do
-                        if markerItem.markerData.cellId then
-                            this.removeLocal(markerItem.markerData.id, markerItem.markerData.cellId)
-                        else
-                            this.removeWorld(markerItem.markerData.id)
-                        end
-                    end
-                    image:getTopLevelMenu():updateLayout()
-                end
-            end,
-        }
+        ::next::
+        onClickCallbacks(e.source)
     end)
 
     image:register(tes3.uiEvent.help, function (e)
         if not e.source then return end
-        ---@type markerLib.markerContainer
-        local luaData = e.source:getLuaData("data")
-        if not luaData then return end
-
-        table.clear(tempRecordList)
-        for id, dt in pairs(luaData.items) do
-            table.insert(tempRecordList, dt.record)
-        end
-
-        table.sort(tempRecordList, function (a, b)
-            return (a.priority or 0) > (b.priority or 0)
-        end)
+        local recordList = getSortedRecordList(e.source)
+        if not recordList then return end
 
         local tooltip = tes3ui.createTooltipMenu()
         tooltip.childAlignX = 0.5
@@ -1972,6 +2008,8 @@ function this.save()
     for id, data in pairs(records) do
         if this.markersToRemove[id] or data.temporary then
             records[id] = nil
+        elseif data.onClickCallback then
+            data.onClickCallback = nil
         end
     end
 
