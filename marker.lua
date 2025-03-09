@@ -187,9 +187,9 @@ this.worldBounds = worldBounds
 ---@field alpha number|nil transparency of the marker image [0, 1]
 ---@field hide boolean|nil
 ---@field priority number|nil
----@field name string|nil name on the tooltip
+---@field name string|nil name on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked
 ---@field nameColor number[]|nil color of the tooltip field *name*. {r, g, b} [0, 1]
----@field description string|nil description on the tooltip
+---@field description string|nil description on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked
 ---@field descriptionColor number[]|nil color of the tooltip field *description*. {r, g, b} [0, 1]
 ---@field color number[]|nil {r, g, b} [0, 1]
 ---@field temporary boolean|nil if true, the record will not be saved to the save file
@@ -631,15 +631,13 @@ end
 
 local tempRecordList = {}
 
+---@param markerData markerLib.markerContainer
 ---@return markerLib.markerRecord[]?
-local function getSortedRecordList(element)
+local function getSortedRecordList(markerData, element)
     if not element then return end
-    ---@type markerLib.markerContainer
-    local luaData = element:getLuaData("data")
-    if not luaData then return end
 
     table.clear(tempRecordList)
-    for id, dt in pairs(luaData.items) do
+    for id, dt in pairs(markerData.items) do
         table.insert(tempRecordList, dt.record)
     end
 
@@ -716,7 +714,11 @@ local function drawMarker(pane, x, y, record, position)
     image.consumeMouseEvents = true
 
     local function onClickCallbacks(element)
-        local recordList = getSortedRecordList(element)
+        ---@type markerLib.markerContainer
+        local luaData = element:getLuaData("data")
+        if not luaData then return end
+
+        local recordList = getSortedRecordList(luaData, element)
         if not recordList then return end
 
         for i, rec in ipairs(recordList) do
@@ -772,7 +774,12 @@ local function drawMarker(pane, x, y, record, position)
 
     image:register(tes3.uiEvent.help, function (e)
         if not e.source then return end
-        local recordList = getSortedRecordList(e.source)
+
+        ---@type markerLib.markerContainer
+        local luaData = e.source:getLuaData("data")
+        if not luaData then return end
+
+        local recordList = getSortedRecordList(luaData, e.source)
         if not recordList then return end
 
         local tooltip = tes3ui.createTooltipMenu()
@@ -793,7 +800,12 @@ local function drawMarker(pane, x, y, record, position)
             blockCount = blockCount + 1
 
             if rec.name then
-                local label = block:createLabel{id = tooltipName, text = rec.name}
+                local str = rec.name
+                if luaData.ref and luaData.ref:valid() then
+                    local ref = luaData.ref:getObject()
+                    str = string.gsub(str, "#objectName#", ref.baseObject.name)
+                end
+                local label = block:createLabel{id = tooltipName, text = str}
                 label.color = rec.nameColor or rec.color or label.color
                 label.autoHeight = true
                 label.autoWidth = true
@@ -803,6 +815,11 @@ local function drawMarker(pane, x, y, record, position)
             end
 
             if rec.description then
+                local str = rec.description
+                if luaData.ref and luaData.ref:valid() then
+                    local ref = luaData.ref:getObject()
+                    str = string.gsub(str, "#objectName#", ref.baseObject.name)
+                end
                 local label = block:createLabel{id = tooltipDescription, text = rec.description}
                 label.color = rec.descriptionColor or rec.color or label.color
                 label.autoHeight = true
