@@ -188,7 +188,9 @@ this.worldBounds = worldBounds
 ---@field hide boolean|nil
 ---@field priority number|nil
 ---@field name string|nil name on the tooltip
+---@field nameColor number[]|nil color of the tooltip field *name*. {r, g, b} [0, 1]
 ---@field description string|nil description on the tooltip
+---@field descriptionColor number[]|nil color of the tooltip field *description*. {r, g, b} [0, 1]
 ---@field color number[]|nil {r, g, b} [0, 1]
 ---@field temporary boolean|nil if true, the record will not be saved to the save file
 ---@field zDifference number|nil difference in z-coordinates between the player and the tracked object to cause the icon to change to above|below one
@@ -556,6 +558,8 @@ function this.addRecord(id, params)
     record.priority = params.priority or 0
     record.zDifference = params.zDifference
     record.alpha = params.alpha
+    record.nameColor = params.nameColor
+    record.descriptionColor = params.descriptionColor
 
     record.onClickCallback = params.onClickCallback
 
@@ -775,7 +779,7 @@ local function drawMarker(pane, x, y, record, position)
         tooltip.childAlignX = 0.5
 
         local blockCount = 0
-        for i, rec in ipairs(tempRecordList) do
+        for i, rec in ipairs(recordList) do
             if not rec.name and not rec.description then goto continue end
 
             local block = tooltip:createBlock{id = tooltipBlock}
@@ -790,7 +794,7 @@ local function drawMarker(pane, x, y, record, position)
 
             if rec.name then
                 local label = block:createLabel{id = tooltipName, text = rec.name}
-                label.color = rec.color or label.color
+                label.color = rec.nameColor or rec.color or label.color
                 label.autoHeight = true
                 label.autoWidth = true
                 label.maxWidth = 350
@@ -800,7 +804,7 @@ local function drawMarker(pane, x, y, record, position)
 
             if rec.description then
                 local label = block:createLabel{id = tooltipDescription, text = rec.description}
-                label.color = rec.color or label.color
+                label.color = rec.descriptionColor or rec.color or label.color
                 label.autoHeight = true
                 label.autoWidth = true
                 label.maxWidth = 350
