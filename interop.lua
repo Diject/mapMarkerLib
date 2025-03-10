@@ -72,7 +72,7 @@ function this.duplicateRecord(id)
     return markers.duplicateRecord(id)
 end
 
----Returns record data. You can change the data on the fly. Dangerous method!!!
+---Returns record data. You can change the data on the fly.
 ---@param id string
 ---@return markerLib.markerRecord|nil
 function this.getRecord(id)
