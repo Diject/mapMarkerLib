@@ -187,9 +187,9 @@ this.worldBounds = worldBounds
 ---@field alpha number|nil transparency of the marker image [0, 1]
 ---@field hide boolean|nil
 ---@field priority number|nil
----@field name string|nil name on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked
+---@field name string|nil name on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked, or #itemName#
 ---@field nameColor number[]|nil color of the tooltip field *name*. {r, g, b} [0, 1]
----@field description string|nil description on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked
+---@field description string|nil description on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked, or #itemName#
 ---@field descriptionColor number[]|nil color of the tooltip field *description*. {r, g, b} [0, 1]
 ---@field color number[]|nil {r, g, b} [0, 1]
 ---@field temporary boolean|nil if true, the record will not be saved to the save file
@@ -808,6 +808,13 @@ local function drawMarker(pane, x, y, record, position)
                     local ref = luaData.ref:getObject()
                     str = string.gsub(str, "#objectName#", ref.baseObject.name)
                 end
+                if luaData.markerData and luaData.markerData.itemId then
+                    local itemId = luaData.markerData.itemId
+                    local obj = tes3.getObject(itemId)
+                    if obj then
+                        str = string.gsub(str, "#itemName#", obj.name)
+                    end
+                end
                 local label = block:createLabel{id = tooltipName, text = str}
                 label.color = rec.nameColor or rec.color or label.color
                 label.autoHeight = true
@@ -828,6 +835,13 @@ local function drawMarker(pane, x, y, record, position)
                 if luaData.ref and luaData.ref:valid() then
                     local ref = luaData.ref:getObject()
                     str = string.gsub(str, "#objectName#", ref.baseObject.name)
+                end
+                if luaData.markerData and luaData.markerData.itemId then
+                    local itemId = luaData.markerData.itemId
+                    local obj = tes3.getObject(itemId)
+                    if obj then
+                        str = string.gsub(str, "#itemName#", obj.name)
+                    end
                 end
                 local label = block:createLabel{id = tooltipDescription, text = rec.description}
                 label.color = rec.descriptionColor or rec.color or label.color
