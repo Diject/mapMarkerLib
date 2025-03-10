@@ -785,6 +785,9 @@ local function drawMarker(pane, x, y, record, position)
         local tooltip = tes3ui.createTooltipMenu()
         tooltip.childAlignX = 0.5
 
+        -- used to group names
+        local lastName = nil
+
         local blockCount = 0
         for i, rec in ipairs(recordList) do
             if not rec.name and not rec.description then goto continue end
@@ -812,6 +815,12 @@ local function drawMarker(pane, x, y, record, position)
                 label.maxWidth = 350
                 label.wrapText = true
                 label.justifyText = tes3.justifyText.left
+
+                if lastName == str then
+                    label.visible = false
+                else
+                    lastName = str
+                end
             end
 
             if rec.description then
