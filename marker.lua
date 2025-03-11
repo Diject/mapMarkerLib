@@ -791,6 +791,7 @@ local function drawMarker(pane, x, y, record, position)
         local blockCount = 0
         for i, rec in ipairs(recordList) do
             if not rec.name and not rec.description then goto continue end
+            if rec.hide then goto continue end
 
             local block = tooltip:createBlock{id = tooltipBlock}
             block.flowDirection = tes3.flowDirection.topToBottom
@@ -866,43 +867,40 @@ local function drawMarker(pane, x, y, record, position)
 end
 
 ---@param arr table<string, markerLib.activeLocalMarkerElement>
-local function getMaxPriorityRecordByArr(arr)
+local function getMaxPriorityAndVisibilityByArr(arr)
+    local visible = false
     local hPriorRec
     local hPriority = -math.huge
     for id, dt in pairs(arr) do
-        if dt.record.priority > hPriority then
-            hPriority = dt.record.priority
-            hPriorRec = dt.record
+        local record = dt.record
+        if not record.hide then
+            visible = true
+            if record.priority > hPriority then
+                hPriority = record.priority
+                hPriorRec = record
+            end
         end
     end
-    return hPriorRec
+    return hPriorRec, visible
 end
 
----@param element tes3uiElement
----@return markerLib.markerRecord|nil
-local function getMaxPriorityRecord(element)
-    if not element then return end
-
-    ---@type markerLib.markerContainer
-    local luaData = element:getLuaData("data")
-    if not luaData then return end
-
-    return getMaxPriorityRecordByArr(luaData.items)
-end
 
 ---@param markerEl tes3uiElement
 ---@param updateImage boolean|nil update image
 ---@return boolean|nil
 local function changeMarker(markerEl, x, y, updateImage)
-    ---@type markerLib.markerRecord
-    local rec = getMaxPriorityRecord(markerEl)
-
-    if not rec then return end
-    local ret = false
 
     ---@type markerLib.markerContainer
     local luaData = markerEl:getLuaData("data")
     if not luaData then return end
+
+    local rec, visibleState = getMaxPriorityAndVisibilityByArr(luaData.items)
+    if not rec then
+        markerEl.visible = false
+        return
+    end
+
+    local ret = false
 
     local imageRecId = markerEl:getLuaData("imageRecordId")
     local position = luaData.position
@@ -966,7 +964,7 @@ local function changeMarker(markerEl, x, y, updateImage)
         ret = ret or true
     end
 
-    local visible = (markerEl:getLuaData("visible") or true) and not (rec.hide or false)
+    local visible = (markerEl:getLuaData("visible") or true) and visibleState
     if markerEl.visible ~= visible then
         markerEl.visible = visible
     end
