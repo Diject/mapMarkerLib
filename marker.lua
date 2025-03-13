@@ -331,7 +331,7 @@ function this.isReady()
 end
 
 local function getCellEditorName(x, y)
-    local cell = tes3.getCell{ x = x / 8192, y = y / 8192 }
+    local cell = tes3.getCell{ position = tes3vector3.new(x, y, 0) }
     if not cell then return "" end
     return cell.editorName
 end
@@ -1492,7 +1492,7 @@ function this.createLocalMarkers()
                         localPane:reorderChildren(1, marker, -1)
                     end
 
-                    log("marker icon has been created, id", id)
+                    log("marker icon has been created, id", id, "parent id", markerId)
                 end
             end
         end
@@ -1828,7 +1828,7 @@ function this.createWorldMarkers()
 
                 this.shouldUpdateWorld = true
 
-                log("marker icon has been created, id", data.id)
+                log("marker icon has been created, id", data.id, "parent id", markerId)
             end
         end
         ::continue::
