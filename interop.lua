@@ -131,11 +131,13 @@ recordOOP.__index = recordOOP
 ---@param params markerLib.markerRecord
 ---@return markerLib.recordOOP?
 function this.record.new(params)
-    local recordId = markers.addRecord(nil, params)
+    local recordId, record = markers.addRecord(nil, params)
     if recordId then
         ---@class markerLib.recordOOP
         local self = setmetatable({}, recordOOP)
         self.id = recordId
+        ---@type markerLib.markerRecord
+        self.data = record
 
         return self
     end
@@ -144,10 +146,13 @@ end
 ---@param id string record id
 ---@return markerLib.recordOOP?
 function this.record.get(id)
-    if markers.getRecord(id) then
+    local record = markers.getRecord(id)
+    if record then
         ---@class markerLib.recordOOP
         local self = setmetatable({}, recordOOP)
         self.id = id
+        ---@type markerLib.markerRecord
+        self.data = record
         return self
     end
     return nil
@@ -155,16 +160,17 @@ end
 
 ---Hides or shows all markers with this record. Requires updateMarkers(true) to apply changes
 ---@param value boolean? default: *true*. true - hide all markers with this record. false - show all markers with this record
----@return boolean? ret returns true if the record found and removed. Or false if it was removed early
+---@return boolean? ret returns true if the record found and hidden. Or false if it was hidden early
 function recordOOP:hide(value)
     if value == nil then value = true end
-    markers.getRecord(self.id).hide = value
+    if not self.data then return end
+    self.data.hide = value
 end
 
 ---Registers a callback function that will be called when a marker with the record is clicked. Returning false will prevent any lower priority callbacks on the same marker from being called
 ---@param func fun(e: markerLib.markerRecord.onClickCallbackData):boolean?
 function recordOOP:registerOnClick(func)
-    markers.getRecord(self.id).onClickCallback = func
+    self.data.onClickCallback = func
 end
 
 ---@return boolean? ret returns true if the record found and removed. Or false if it was removed early
@@ -175,13 +181,14 @@ end
 ---@param params markerLib.markerRecord
 ---@return boolean? ret returns record id if found and updated. Or nil if not
 function recordOOP:update(params)
-    return markers.addRecord(self.id, params)
+    local recordId = markers.addRecord(self.id, params)
+    return recordId
 end
 
----Returns record data. You can change the data on the fly. Dangerous method!!!
+---Returns record data. You can change the data on the fly
 ---@return markerLib.markerRecord?
 function recordOOP:getData()
-    return markers.getRecord(self.id)
+    return self.data
 end
 
 ---@return boolean
@@ -192,11 +199,12 @@ end
 --- creates a new record with data from an existing
 ---@return markerLib.recordOOP|nil ret returns new record if successfuly duplicated. Or nil if not
 function recordOOP:duplicate()
-    local newId = markers.duplicateRecord(self.id)
+    local newId, record = markers.duplicateRecord(self.id)
     if not newId then return end
 
     local newSelf = setmetatable({}, recordOOP)
     newSelf.id = newId
+    newSelf.data = record
 
     return newSelf
 end

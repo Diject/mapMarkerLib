@@ -523,6 +523,7 @@ end
 ---@param id string|nil
 ---@param params markerLib.markerRecord
 ---@return string|nil ret returns record id if added or updated. Or nil if not
+---@return markerLib.markerRecord? record
 function this.addRecord(id, params)
     if not params.path then return end
 
@@ -575,7 +576,7 @@ function this.addRecord(id, params)
 
     log("record added,", id)
 
-    return id
+    return id, record
 end
 
 --- creates a new record with data from an existing
