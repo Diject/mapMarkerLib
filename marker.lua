@@ -876,10 +876,10 @@ local function getMaxPriorityAndVisibilityByArr(arr)
         local record = dt.record
         if not record.hide then
             visible = true
-            if record.priority > hPriority then
-                hPriority = record.priority
-                hPriorRec = record
-            end
+        end
+        if record.priority > hPriority then
+            hPriority = record.priority
+            hPriorRec = record
         end
     end
     return hPriorRec, visible
