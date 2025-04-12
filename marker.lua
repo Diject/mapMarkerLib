@@ -796,6 +796,8 @@ local function drawMarker(pane, x, y, record, position)
             if not rec.name and not rec.description then goto continue end
             if rec.hide then goto continue end
 
+            event.trigger("mapMarkerLib:tooltipPreRecordRegistered", {record = rec, element = tooltip}, { filter = rec.id })
+
             local block = tooltip:createBlock{id = tooltipBlock}
             block.flowDirection = tes3.flowDirection.topToBottom
             block.autoHeight = true
@@ -887,6 +889,7 @@ local function drawMarker(pane, x, y, record, position)
         if blockCount == 0 then
             tooltip:destroy()
         else
+            event.trigger("mapMarkerLib:tooltipCreated", {element = tooltip, records = recordList}, {})
             tooltip:getTopLevelMenu():updateLayout()
         end
     end)

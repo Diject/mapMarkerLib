@@ -8,7 +8,9 @@ this.version = 3 -- API version. *nil* for the first version
 this.event = {
     initialized = "mapMarkerLib:initialized",
     markerRemoved = "mapMarkerLib:markerDataRemoved",
-    recordRemoved = "mapMarkerLib:recordDataRemoved"
+    recordRemoved = "mapMarkerLib:recordDataRemoved",
+    tooltipPreRecordRegistered = "mapMarkerLib:recordDataRemoved",
+    tooltipCreated = "mapMarkerLib:tooltipCreated",
 }
 
 ---@class markerLib.event.markerDataRemoved.params
@@ -20,10 +22,20 @@ this.event = {
 ---@field id string
 ---@field data markerLib.markerRecord
 
+---@class markerLib.event.tooltipPreRecordRegistered.params
+---@field record markerLib.markerRecord
+---@field element tes3uiElement tooltip element
+
+---@class markerLib.event.tooltipCreated.params
+---@field records markerLib.markerRecord[]
+---@field element tes3uiElement tooltip element
+
 ---@class eventlib
 ---@field register fun(eventId: '"mapMarkerLib:initialized"', callback: (fun(): boolean?), options: nil)
 ---@field register fun(eventId: '"mapMarkerLib:markerDataRemoved"', callback: (fun(e: markerLib.event.markerDataRemoved.params): boolean?), options: {filter : string}?)
 ---@field register fun(eventId: '"mapMarkerLib:recordDataRemoved"', callback: (fun(e: markerLib.event.recordDataRemoved.params): boolean?), options: {filter : string}?)
+---@field register fun(eventId: '"mapMarkerLib:tooltipPreRecordRegistered"', callback: (fun(e: markerLib.event.tooltipPreRecordRegistered.params): boolean?), options: {filter : string}?)
+---@field register fun(eventId: '"mapMarkerLib:tooltipCreated"', callback: (fun(e: markerLib.event.tooltipCreated.params): boolean?), options: {}?)
 
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
