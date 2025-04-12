@@ -820,13 +820,14 @@ local function drawMarker(pane, x, y, record, position)
                         str = string.gsub(str, "#itemName#", obj.name)
                     end
                 end
+                return str
             end
 
             local hasLabels = false
 
             if rec.name and rec.name ~= "" then
                 local str = rec.name
-                replaceTags(str)
+                str = replaceTags(str)
                 local label = block:createLabel{id = tooltipName, text = str}
                 label.color = rec.nameColor or rec.color or label.color
                 label.autoHeight = true
@@ -855,7 +856,7 @@ local function drawMarker(pane, x, y, record, position)
 
                 for _, descr in ipairs(descriptions) do
                     local str = descr
-                    replaceTags(str)
+                    str = replaceTags(str)
                     if str ~= "" then
                         local label = block:createLabel{id = tooltipDescription, text = str}
 
