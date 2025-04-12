@@ -608,6 +608,7 @@ function this.removeRecord(id)
         this.records[id] = nil
         this.shouldUpdateWorld = true
         event.trigger("mapMarkerLib:recordDataRemoved", {id = id, data = rec}, { filter = id })
+        rec.hide = true
         log("record removed,", id)
         return true
     end
@@ -910,7 +911,7 @@ local function getMaxPriorityAndVisibilityByArr(arr)
         if not record.hide then
             visible = true
         end
-        if record.priority > hPriority then
+        if record.priority > hPriority and not record.hide then
             hPriority = record.priority
             hPriorRec = record
         end
