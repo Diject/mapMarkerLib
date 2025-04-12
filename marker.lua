@@ -1293,7 +1293,7 @@ local function buildWorldMarkerPosMap()
     for id, data in pairs(this.activeWorldMarkers) do
         local pos = data.position
         if pos then
-            local mapId = tostring(math.floor(pos.x / 2000))..","..tostring(math.floor(pos.y / 2000))
+            local mapId = tostring(math.floor(pos.x / 3000))..","..tostring(math.floor(pos.y / 3000))
             worldMarkerPositionMap[mapId] = data
         end
     end
@@ -1302,20 +1302,20 @@ end
 ---@param position tes3vector3
 ---@return markerLib.markerContainer?
 local function getWorldMarkerPosData(position)
-    local mapId = tostring(math.floor(position.x / 2000))..","..tostring(math.floor(position.y / 2000))
+    local mapId = tostring(math.floor(position.x / 3000))..","..tostring(math.floor(position.y / 3000))
     return worldMarkerPositionMap[mapId]
 end
 
 ---@param position tes3vector3
 ---@param data markerLib.markerContainer
 local function addWorldMarkerPosData(position, data)
-    local mapId = tostring(math.floor(position.x / 2000))..","..tostring(math.floor(position.y / 2000))
+    local mapId = tostring(math.floor(position.x / 3000))..","..tostring(math.floor(position.y / 3000))
     worldMarkerPositionMap[mapId] = data
 end
 
 ---@param position tes3vector3
 local function removeWorldMarkerPosData(position)
-    local mapId = tostring(math.floor(position.x / 2000))..","..tostring(math.floor(position.y / 2000))
+    local mapId = tostring(math.floor(position.x / 3000))..","..tostring(math.floor(position.y / 3000))
     worldMarkerPositionMap[mapId] = nil
 end
 
