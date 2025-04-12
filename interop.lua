@@ -3,7 +3,7 @@ local markers = include("diject.mapMarkerLib.marker")
 
 local this = {}
 
-this.version = 3 -- API version. *nil* for the first version
+this.version = 4 -- API version. *nil* for the first version
 
 this.event = {
     initialized = "mapMarkerLib:initialized",
