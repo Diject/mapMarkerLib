@@ -189,7 +189,7 @@ this.worldBounds = worldBounds
 ---@field priority number|nil
 ---@field name string|nil name on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked, or #itemName#
 ---@field nameColor number[]|nil color of the tooltip field *name*. {r, g, b} [0, 1]
----@field description string|string[]|nil description on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked, or #itemName#
+---@field description string|string[]|nil descriptions on the tooltip. Empty strings are not displayed. You can use *#objectName#* tag to insert object name if the object is being tracked, or #itemName#
 ---@field descriptionColor number[]|nil color of the tooltip field *description*. {r, g, b} [0, 1]
 ---@field color number[]|nil {r, g, b} [0, 1]
 ---@field temporary boolean|nil if true, the record will not be saved to the save file
