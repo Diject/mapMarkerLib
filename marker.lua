@@ -788,6 +788,8 @@ local function drawMarker(pane, x, y, record, position)
 
         -- used to group names
         local lastName = nil
+        -- used to group descriptions
+        local lastDescrHash
 
         local blockCount = 0
         for i, rec in ipairs(recordList) do
@@ -834,6 +836,7 @@ local function drawMarker(pane, x, y, record, position)
                 else
                     lastName = str
                     hasLabels = true
+                    lastDescrHash = nil
                 end
             end
 
@@ -845,18 +848,29 @@ local function drawMarker(pane, x, y, record, position)
                 else
                     descriptions = rec.description
                 end
+
                 for _, descr in ipairs(descriptions) do
                     local str = descr
                     replaceTags(str)
                     if str ~= "" then
                         local label = block:createLabel{id = tooltipDescription, text = str}
-                        label.color = rec.descriptionColor or rec.color or label.color
+
+                        local color = rec.descriptionColor or rec.color or label.color
+                        label.color = color
+
                         label.autoHeight = true
                         label.autoWidth = true
                         label.maxWidth = 400
                         label.wrapText = true
                         label.justifyText = tes3.justifyText.left
-                        hasLabels = true
+
+                        local descrHash = string.format("%s,%s,%s,%s", str, tostring(color[1]), tostring(color[2]), tostring(color[3]))
+                        if descrHash == lastDescrHash then
+                            label.visible = false
+                        else
+                            lastDescrHash = descrHash
+                            hasLabels = true
+                        end
                     end
                 end
             end
