@@ -532,8 +532,14 @@ function this.addRecord(id, params)
     local texture = tes3.loadSourceTexture(params.path)
     if not texture then return end
 
+    if not id then
+        id = getId()
+    elseif not this.records[id] then
+        return
+    end
+
     ---@type markerLib.markerRecord
-    local record = {path = texturePath}
+    local record = this.records[id] or {path = texturePath}
 
     if params.pathAbove then
         texture = tes3.loadSourceTexture(params.pathAbove)
@@ -565,12 +571,6 @@ function this.addRecord(id, params)
     record.userData = params.userData
 
     record.onClickCallback = params.onClickCallback
-
-    if not id then
-        id = getId()
-    elseif not this.records[id] then
-        return
-    end
 
     record.id = id
 
