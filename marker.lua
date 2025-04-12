@@ -189,7 +189,7 @@ this.worldBounds = worldBounds
 ---@field priority number|nil
 ---@field name string|nil name on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked, or #itemName#
 ---@field nameColor number[]|nil color of the tooltip field *name*. {r, g, b} [0, 1]
----@field description string|nil description on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked, or #itemName#
+---@field description string|string[]|nil description on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked, or #itemName#
 ---@field descriptionColor number[]|nil color of the tooltip field *description*. {r, g, b} [0, 1]
 ---@field color number[]|nil {r, g, b} [0, 1]
 ---@field temporary boolean|nil if true, the record will not be saved to the save file
@@ -802,8 +802,6 @@ local function drawMarker(pane, x, y, record, position)
             block.borderBottom = 3
             block.childAlignX = 0.5
 
-            blockCount = blockCount + 1
-
             local function replaceTags(str)
                 if luaData.ref and luaData.ref:valid() then
                     local ref = luaData.ref:getObject()
@@ -818,7 +816,9 @@ local function drawMarker(pane, x, y, record, position)
                 end
             end
 
-            if rec.name then
+            local hasLabels = false
+
+            if rec.name and rec.name ~= "" then
                 local str = rec.name
                 replaceTags(str)
                 local label = block:createLabel{id = tooltipName, text = str}
@@ -833,19 +833,38 @@ local function drawMarker(pane, x, y, record, position)
                     label.visible = false
                 else
                     lastName = str
+                    hasLabels = true
                 end
             end
 
             if rec.description then
-                local str = rec.description
-                replaceTags(str)
-                local label = block:createLabel{id = tooltipDescription, text = rec.description}
-                label.color = rec.descriptionColor or rec.color or label.color
-                label.autoHeight = true
-                label.autoWidth = true
-                label.maxWidth = 350
-                label.wrapText = true
-                label.justifyText = tes3.justifyText.left
+                local descriptions
+                if type(rec.description) == "string" then
+                    descriptions = {}
+                    table.insert(descriptions, rec.description)
+                else
+                    descriptions = rec.description
+                end
+                for _, descr in ipairs(descriptions) do
+                    local str = descr
+                    replaceTags(str)
+                    if str ~= "" then
+                        local label = block:createLabel{id = tooltipDescription, text = str}
+                        label.color = rec.descriptionColor or rec.color or label.color
+                        label.autoHeight = true
+                        label.autoWidth = true
+                        label.maxWidth = 400
+                        label.wrapText = true
+                        label.justifyText = tes3.justifyText.left
+                        hasLabels = true
+                    end
+                end
+            end
+
+            if hasLabels then
+                blockCount = blockCount + 1
+            else
+                block.visible = false
             end
 
             ::continue::
