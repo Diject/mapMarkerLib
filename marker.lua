@@ -804,8 +804,7 @@ local function drawMarker(pane, x, y, record, position)
 
             blockCount = blockCount + 1
 
-            if rec.name then
-                local str = rec.name
+            local function replaceTags(str)
                 if luaData.ref and luaData.ref:valid() then
                     local ref = luaData.ref:getObject()
                     str = string.gsub(str, "#objectName#", ref.baseObject.name)
@@ -817,6 +816,11 @@ local function drawMarker(pane, x, y, record, position)
                         str = string.gsub(str, "#itemName#", obj.name)
                     end
                 end
+            end
+
+            if rec.name then
+                local str = rec.name
+                replaceTags(str)
                 local label = block:createLabel{id = tooltipName, text = str}
                 label.color = rec.nameColor or rec.color or label.color
                 label.autoHeight = true
@@ -834,17 +838,7 @@ local function drawMarker(pane, x, y, record, position)
 
             if rec.description then
                 local str = rec.description
-                if luaData.ref and luaData.ref:valid() then
-                    local ref = luaData.ref:getObject()
-                    str = string.gsub(str, "#objectName#", ref.baseObject.name)
-                end
-                if luaData.markerData and luaData.markerData.itemId then
-                    local itemId = luaData.markerData.itemId
-                    local obj = tes3.getObject(itemId)
-                    if obj then
-                        str = string.gsub(str, "#itemName#", obj.name)
-                    end
-                end
+                replaceTags(str)
                 local label = block:createLabel{id = tooltipDescription, text = rec.description}
                 label.color = rec.descriptionColor or rec.color or label.color
                 label.autoHeight = true
