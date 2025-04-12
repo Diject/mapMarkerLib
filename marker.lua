@@ -195,6 +195,7 @@ this.worldBounds = worldBounds
 ---@field temporary boolean|nil if true, the record will not be saved to the save file
 ---@field zDifference number|nil difference in z-coordinates between the player and the tracked object to cause the icon to change to above|below one
 ---@field onClickCallback (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
+---@field userData any should be serializible
 
 local function getId()
     local id = string.format("%.0f", storageData.id)
@@ -561,6 +562,7 @@ function this.addRecord(id, params)
     record.alpha = params.alpha
     record.nameColor = params.nameColor
     record.descriptionColor = params.descriptionColor
+    record.userData = params.userData
 
     record.onClickCallback = params.onClickCallback
 
