@@ -805,7 +805,7 @@ local function drawMarker(pane, x, y, record, position)
             block.flowDirection = tes3.flowDirection.topToBottom
             block.autoHeight = true
             block.autoWidth = true
-            block.maxWidth = 350
+            block.maxWidth = 400
             block.borderBottom = 3
             block.childAlignX = 0.5
 
