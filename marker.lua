@@ -809,6 +809,8 @@ local function drawMarker(pane, x, y, record, position)
             block.borderBottom = 3
             block.childAlignX = 0.5
 
+            block:setLuaData("record", rec)
+
             local function replaceTags(str)
                 if luaData.ref and luaData.ref:valid() then
                     local ref = luaData.ref:getObject()
