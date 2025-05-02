@@ -184,6 +184,7 @@ this.worldBounds = worldBounds
 ---@field textureShiftX integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift left, positive values shift right.* The value is applied after scaling
 ---@field textureShiftY integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift down, positive values shift up.* The value is applied after scaling
 ---@field scale number|nil positive value - multiplier for the marker image, negative value - height for the marker image in game coordinates (width scale will be the same as height)
+---@field scaleTexture boolean|nil Default: *false*. If true, the marker image will scale in proportion to map zoom. Applicable only to markers on the world map
 ---@field alpha number|nil transparency of the marker image [0, 1]
 ---@field hide boolean|nil
 ---@field priority number|nil
@@ -563,6 +564,7 @@ function this.addRecord(id, params)
     record.temporary = params.temporary
     record.color = params.color
     record.scale = params.scale
+    record.scaleTexture = params.scaleTexture
     record.priority = params.priority or 0
     record.zDifference = params.zDifference
     record.alpha = params.alpha
@@ -663,9 +665,12 @@ end
 ---@param pane tes3uiElement
 ---@param record markerLib.markerRecord
 ---@param position {z : number}|tes3vector3|nil position of the tracked object
+---@param textureScale number?
+---@param isWorld boolean?
 ---@return tes3uiElement|nil
-local function drawMarker(pane, x, y, record, position)
+local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
     if not pane or not record then return end
+    if not textureScale then textureScale = 1 end
 
     local path
     if position and (record.pathBelow or record.pathAbove) then
@@ -686,20 +691,22 @@ local function drawMarker(pane, x, y, record, position)
     local scale = record.scale or 1
     if scale < 0 then
         scale = calcNegativeScaleValue(scale, record.height)
+    elseif isWorld and record.scaleTexture then
+        scale = scale * textureScale
     end
 
     local xShift
     if record.scale < 0 then
         xShift = (record.textureShiftX or record.width / 2) * scale
     else
-        xShift = record.textureShiftX or -record.width / 2
+        xShift = (record.textureShiftX or -record.width / 2) * textureScale
     end
 
     local yShift
     if record.scale < 0 then
         yShift = (record.textureShiftY or record.height / 2) * scale
     else
-        yShift = record.textureShiftY or record.height / 2
+        yShift = (record.textureShiftY or record.height / 2) * textureScale
     end
 
     image.autoHeight = true
@@ -924,8 +931,11 @@ end
 
 ---@param markerEl tes3uiElement
 ---@param updateImage boolean|nil update image
+---@param textureScale number?
+---@param isWorld boolean?
 ---@return boolean|nil
-local function changeMarker(markerEl, x, y, updateImage)
+local function changeMarker(markerEl, x, y, updateImage, textureScale, isWorld)
+    if not textureScale then textureScale = 1 end
 
     ---@type markerLib.markerContainer
     local luaData = markerEl:getLuaData("data")
@@ -967,6 +977,8 @@ local function changeMarker(markerEl, x, y, updateImage)
         local scale = rec.scale or 1
         if scale < 0 then
             scale = calcNegativeScaleValue(scale, rec.height)
+        elseif isWorld and rec.scaleTexture then
+            scale = scale * textureScale
         end
 
         markerEl.imageScaleX = scale
@@ -986,14 +998,14 @@ local function changeMarker(markerEl, x, y, updateImage)
         if rec.scale < 0 then
             xShift = (rec.textureShiftX or rec.width / 2) * markerEl.imageScaleX
         else
-            xShift = rec.textureShiftX or -rec.width / 2
+            xShift = (rec.textureShiftX or -rec.width / 2) * textureScale
         end
 
         local yShift
         if rec.scale < 0 then
             yShift = (rec.textureShiftY or rec.height / 2) * markerEl.imageScaleY
         else
-            yShift = rec.textureShiftY or rec.height / 2
+            yShift = (rec.textureShiftY or rec.height / 2) * textureScale
         end
 
         markerEl.positionX = math.round(x + xShift)
@@ -1841,7 +1853,7 @@ function this.createWorldMarkers()
         else
             local x, y = this.convertObjectPosToWorldMapPaneCoordinates(pos)
 
-            local marker = drawMarker(worldPane, x, y, record)
+            local marker = drawMarker(worldPane, x, y, record, nil, this.currentWorldZoom / 2, true)
             if marker then
                 this.activeWorldMarkers[data.id] = {
                     id = data.id,
@@ -1888,6 +1900,8 @@ function this.updateWorldMarkers(forceRedraw)
     if not this.shouldUpdateWorld and not forceRedraw and
             worldPane.width == lastWorldPaneWidth and worldPane.height == lastWorldPaneHeight then
         return
+    elseif worldPane.width ~= lastWorldPaneWidth or worldPane.height ~= lastWorldPaneHeight then
+        forceRedraw = true
     end
 
     lastWorldPaneWidth = worldPane.width
@@ -1922,7 +1936,7 @@ function this.updateWorldMarkers(forceRedraw)
 
         local x, y = this.convertObjectPosToWorldMapPaneCoordinates(pos)
 
-        changeMarker(data.marker, x, y, forceRedraw)
+        changeMarker(data.marker, x, y, forceRedraw, this.currentWorldZoom / 2, true)
 
         ::continue::
     end
