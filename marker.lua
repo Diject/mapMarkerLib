@@ -167,12 +167,12 @@ this.worldBounds = worldBounds
 ---@field objectId string|nil should be lowercase
 ---@field itemId string|nil should be lowercase
 ---@field conditionFunc (fun(data: markerLib.activeLocalMarkerElement):boolean)|nil
----@field temporary boolean|nil if true, the marker will not be saved to the save file
+---@field temporary boolean|nil *Default*: `false`. If true, the marker will not be saved to the save file
 ---@field trackedRef mwseSafeObjectHandle|nil
----@field offscreen boolean|nil like off-screen indicator
----@field shortTerm boolean|nil if true, the marker will be deleted after the cell has changed
----@field group boolean|nil if false, the marker will not be grouped with other markers. Only for positional markers.
----@field insertBefore boolean|nil if true, the marker will be inserted before other markers. Only for positional markers.
+---@field offscreen boolean|nil *Default*: `false`. Like off-screen indicator
+---@field shortTerm boolean|nil *Default*: `false`. If true, the marker will be deleted after the cell has changed
+---@field group boolean|nil *Default*: `false`. If false, the marker will not be grouped with other markers. Only for positional markers.
+---@field insertBefore boolean|nil *Default*: `false`. If true, the marker will be inserted before other markers. Only for positional markers.
 
 ---@class markerLib.markerRecord
 ---@field id string|nil
@@ -181,19 +181,19 @@ this.worldBounds = worldBounds
 ---@field pathBelow string|nil texture path relative to Data Files\Textures
 ---@field width integer|nil texture width
 ---@field height integer|nil texture height
----@field textureShiftX integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift left, positive values shift right.* The value is applied after scaling
----@field textureShiftY integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. *Negative values shift down, positive values shift up.* The value is applied after scaling
+---@field textureShiftX integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. Negative values shift left, positive values shift right. The value is applied after scaling
+---@field textureShiftY integer|nil by default, the marker texture points to the object with its upper left corner. This value shifts the texture. Negative values shift down, positive values shift up. The value is applied after scaling
 ---@field scale number|nil positive value - multiplier for the marker image, negative value - height for the marker image in game coordinates (width scale will be the same as height)
----@field scaleTexture boolean|nil Default: *false*. If true, the marker image will scale in proportion to map zoom. Applicable only to markers on the world map
+---@field scaleTexture boolean|nil *Default*: `false`. If true, the marker image will scale in proportion to map zoom. Applicable only to markers on the world map
 ---@field alpha number|nil transparency of the marker image [0, 1]
----@field hide boolean|nil
+---@field hide boolean|nil *Default*: `false`. If true, the marker will be hidden. The marker will not be removed from the map, but it will not be displayed.
 ---@field priority number|nil
----@field name string|nil name on the tooltip. You can use *#objectName#* tag to insert object name if the object is being tracked, or #itemName#
----@field nameColor number[]|nil color of the tooltip field *name*. {r, g, b} [0, 1]
----@field description string|string[]|nil descriptions on the tooltip. Empty strings are not displayed. You can use *#objectName#* tag to insert object name if the object is being tracked, or #itemName#
----@field descriptionColor number[]|nil color of the tooltip field *description*. {r, g, b} [0, 1]
+---@field name string|nil name on the tooltip. You can use `#objectName#` tag to insert object name if the object is being tracked, or #itemName#
+---@field nameColor number[]|nil color of the tooltip field `name`. {r, g, b} [0, 1]
+---@field description string|string[]|nil descriptions on the tooltip. Empty strings are not displayed. You can use `#objectName#` tag to insert object name if the object is being tracked, or `#itemName#`
+---@field descriptionColor number[]|nil color of the tooltip field `description`. {r, g, b} [0, 1]
 ---@field color number[]|nil {r, g, b} [0, 1]
----@field temporary boolean|nil if true, the record will not be saved to the save file
+---@field temporary boolean|nil *Default*: `false`. If true, the record will not be saved to the save file
 ---@field zDifference number|nil difference in z-coordinates between the player and the tracked object to cause the icon to change to above|below one
 ---@field onClickCallback (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
 ---@field userData any should be serializible
@@ -346,12 +346,12 @@ end
 ---@field objectId string|nil object id to track. Should be lowercase
 ---@field itemId string|nil id of the item in the inventory of the tracked object. If the item does not exist, the marker will be hidden. Should be lowercase
 ---@field conditionFunc (fun(data: markerLib.activeLocalMarkerElement):boolean)|nil The value is not saved between game sessions
----@field temporary boolean|nil if true, the marker will not be saved to the save file
+---@field temporary boolean|nil *Default*: `false`. If true, the marker will not be saved to the save file
 ---@field trackedRef tes3reference|nil the reference that marker is tracking. The value is not saved between game sessions
----@field trackOffscreen boolean|nil show the marker on the map menu border when it is offscreen
----@field shortTerm boolean|nil if true, the marker will be removed if the player's cell changes from interior to interior, exterior to interior, or interior to exterior
----@field group boolean|nil Default: true. If false, the marker will not be grouped with other markers. Only for positional markers.
----@field insertBefore boolean|nil if true, the marker will be inserted before other markers. Only for positional markers. Markers with this flag cannot be grouped with other markers
+---@field trackOffscreen boolean|nil *Default*: `false`. Show the marker on the map menu border when it is offscreen
+---@field shortTerm boolean|nil *Default*: `false`. If true, the marker will be removed if the player's cell changes from interior to interior, exterior to interior, or interior to exterior
+---@field group boolean|nil *Default*: `true`. If false, the marker will not be grouped with other markers. Only for positional markers.
+---@field insertBefore boolean|nil *Default*: `false`. If true, the marker will be inserted before other markers. Only for positional markers. Markers with this flag cannot be grouped with other markers
 
 ---@param params markerLib.addLocalMarker.params
 ---@return string|nil, string|nil ret returns record id and cell id if added. Or nil if not
@@ -457,9 +457,9 @@ end
 ---@field record string|markerLib.recordOOP
 ---@field x number world x coordinate
 ---@field y number world y coordinate
----@field temporary boolean|nil if true, the marker will not be saved to the save file
----@field group boolean|nil Default: true. If false, the marker will not be grouped with other markers. Only for positional markers.
----@field insertBefore boolean|nil if true, the marker will be inserted before other markers. Only for positional markers. Markers with this flag cannot be grouped with other markers
+---@field temporary boolean|nil *Default*: `false`. If true, the marker will not be saved to the save file
+---@field group boolean|nil *Default*: `true`. If false, the marker will not be grouped with other markers. Only for positional markers.
+---@field insertBefore boolean|nil *Default*: `false`. If true, the marker will be inserted before other markers. Only for positional markers. Markers with this flag cannot be grouped with other markers
 
 ---@param params markerLib.addWorldMarker.params
 ---@return string|nil ret returns marker id if added. Or nil if not
