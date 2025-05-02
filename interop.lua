@@ -9,7 +9,7 @@ this.event = {
     initialized = "mapMarkerLib:initialized",
     markerRemoved = "mapMarkerLib:markerDataRemoved",
     recordRemoved = "mapMarkerLib:recordDataRemoved",
-    tooltipPreRecordRegistered = "mapMarkerLib:recordDataRemoved",
+    tooltipPreRecordRegistered = "mapMarkerLib:tooltipPreRecordRegistered",
     tooltipCreated = "mapMarkerLib:tooltipCreated",
 }
 
