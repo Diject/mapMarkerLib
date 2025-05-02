@@ -687,11 +687,12 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
     local image = pane:createImage{id = markerLabelId, path = path}
 
     if record.hide == true then image.visible = false end
+    local scaleTexture = isWorld and record.scaleTexture
 
     local scale = record.scale or 1
     if scale < 0 then
         scale = calcNegativeScaleValue(scale, record.height)
-    elseif isWorld and record.scaleTexture then
+    elseif scaleTexture then
         scale = scale * textureScale
     end
 
@@ -699,14 +700,14 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
     if record.scale < 0 then
         xShift = (record.textureShiftX or record.width / 2) * scale
     else
-        xShift = (record.textureShiftX or -record.width / 2) * textureScale
+        xShift = (record.textureShiftX or -record.width / 2) * (scaleTexture and textureScale or 1)
     end
 
     local yShift
     if record.scale < 0 then
         yShift = (record.textureShiftY or record.height / 2) * scale
     else
-        yShift = (record.textureShiftY or record.height / 2) * textureScale
+        yShift = (record.textureShiftY or record.height / 2) * (scaleTexture and textureScale or 1)
     end
 
     image.autoHeight = true
@@ -967,6 +968,7 @@ local function changeMarker(markerEl, x, y, updateImage, textureScale, isWorld)
     end
 
     local shouldUpdateImage = imageRecId ~= rec.id or (path and path ~= markerEl.contentPath)
+    local scaleTexture = isWorld and rec.scaleTexture
 
     if updateImage or shouldUpdateImage then
 
@@ -977,7 +979,7 @@ local function changeMarker(markerEl, x, y, updateImage, textureScale, isWorld)
         local scale = rec.scale or 1
         if scale < 0 then
             scale = calcNegativeScaleValue(scale, rec.height)
-        elseif isWorld and rec.scaleTexture then
+        elseif scaleTexture then
             scale = scale * textureScale
         end
 
@@ -998,14 +1000,14 @@ local function changeMarker(markerEl, x, y, updateImage, textureScale, isWorld)
         if rec.scale < 0 then
             xShift = (rec.textureShiftX or rec.width / 2) * markerEl.imageScaleX
         else
-            xShift = (rec.textureShiftX or -rec.width / 2) * textureScale
+            xShift = (rec.textureShiftX or -rec.width / 2) * (scaleTexture and textureScale or 1)
         end
 
         local yShift
         if rec.scale < 0 then
             yShift = (rec.textureShiftY or rec.height / 2) * markerEl.imageScaleY
         else
-            yShift = (rec.textureShiftY or rec.height / 2) * textureScale
+            yShift = (rec.textureShiftY or rec.height / 2) * (scaleTexture and textureScale or 1)
         end
 
         markerEl.positionX = math.round(x + xShift)
