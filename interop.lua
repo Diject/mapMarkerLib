@@ -46,7 +46,7 @@ end
 
 ---@param id string marker id
 ---@param cellId string id of cell where marker was placed
----@return boolean ret returns true if the marker is found and removed. Or false if not found
+---@return boolean? ret returns true if the marker is found and removed, false if not found or nil if the lib is not initialized
 function this.removeLocalMarker(id, cellId)
     local ret = markers.removeLocal(id, cellId)
     return ret
@@ -59,7 +59,7 @@ function this.addWorldMarker(params)
 end
 
 ---@param id string marker id
----@return boolean ret returns true if the marker is found and removed. Or false if not found
+---@return boolean? ret returns true if the marker is found and removed, false if not found or nil if the lib is not initialized
 function this.removeWorldMarker(id)
     return markers.removeWorld(id)
 end
@@ -92,7 +92,7 @@ function this.getRecord(id)
 end
 
 ---@param id string record id
----@return boolean ret returns true if the record found and removed. Or false if unfound
+---@return boolean ret returns true if the record is found and removed, false if not found or nil if the lib is not initialized
 function this.removeRecord(id)
     return markers.removeRecord(id)
 end

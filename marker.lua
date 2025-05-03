@@ -431,8 +431,9 @@ end
 
 ---@param id string marker id
 ---@param cellId string id of cell where marker was placed
----@return boolean ret returns true if the marker is found and removed. Or false if not found
+---@return boolean? ret returns true if the marker is found and removed, false if not found or nil if the lib is not initialized
 function this.removeLocal(id, cellId)
+    if not this.localMap then return end
     this.waitingToCreate_local[id] = nil
     local cellData = this.localMap[cellId] or {}
     local marker = cellData[id]
@@ -500,8 +501,9 @@ function this.addWorld(params)
 end
 
 ---@param id string marker id
----@return boolean ret returns true if the marker is found and removed. Or false if not found
+---@return boolean? ret returns true if the marker is found and removed, false if not found or nil if the lib is not initialized
 function this.removeWorld(id)
+    if not this.world then return end
     this.waitingToCreate_world[id] = nil
     local marker = this.world[id]
     if marker then
@@ -527,6 +529,7 @@ end
 ---@return string|nil ret returns record id if added or updated. Or nil if not
 ---@return markerLib.markerRecord? record
 function this.addRecord(id, params)
+    if not this.records then return end
     if not params.path then return end
 
     local texturePath = "textures\\"..params.path
@@ -601,8 +604,9 @@ function this.duplicateRecord(id)
 end
 
 ---@param id string record id
----@return boolean ret returns true if the record is found and removed. Or false if not found
+---@return boolean? ret returns true if the record is found and removed, false if not found or nil if the lib is not initialized
 function this.removeRecord(id)
+    if not this.records then return end
     if not id then return false end
     local rec = this.records[id]
     if rec then
