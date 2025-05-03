@@ -57,7 +57,7 @@ local function menuMultiActivated(e)
     menu:getTopLevelMenu():registerAfter(tes3.uiEvent.update, function (e1)
         if not markerLib.isMultiMenuInitialized then return end
 
-        if markerLib.menu.multiMap.visible and os.clock() - markerLib.lastLocalUpdate > markerLib.minDelayBetweenUpdates then
+        if markerLib.menu.multiMap.visible and os.clock() - markerLib.lastUpdate > markerLib.minDelayBetweenUpdates then
             markerLib.activeMenu = "MenuMulti"
             markerLib.createLocalMarkers()
             markerLib.updateLocalMarkers()
@@ -78,7 +78,7 @@ end
 --- @param e simulatedEventData
 local function simulatedCallback(e)
     if not markerLib.enabled then return end
-    if os.clock() - markerLib.lastLocalUpdate > markerLib.updateInterval then
+    if os.clock() - markerLib.lastUpdate > markerLib.updateInterval then
         local menuMap = markerLib.menu.menuMap
         if markerLib.isMapMenuInitialized and menuMap.visible then ---@diagnostic disable-line: need-check-nil
             menuMap:updateLayout() ---@diagnostic disable-line: need-check-nil
@@ -88,7 +88,7 @@ local function simulatedCallback(e)
             markerLib.updateLocalMarkers()
             markerLib.removeDeletedMarkers()
         else
-            markerLib.lastLocalUpdate = os.clock()
+            markerLib.lastUpdate = os.clock()
             return
         end
     end
@@ -164,11 +164,11 @@ local function loadedCallback(e)
     end
 
     local watchdogTimer = timer.start({
-        duration = 0.5,
+        duration = 0.2,
         iterations = -1,
         type = timer.real,
         callback = function()
-            if os.clock() - markerLib.lastUpdate > 0.25 then
+            if os.clock() - markerLib.lastUpdate > 0.1 then
                 markerLib.updateMapMenu()
             end
         end
