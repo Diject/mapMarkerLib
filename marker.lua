@@ -238,6 +238,8 @@ end
 ---@field localPlayerMarker tes3uiElement?
 ---@field worldMap tes3uiElement?
 ---@field worldPane tes3uiElement?
+---@field worldMarkerPane tes3uiElement?
+---@field worldPlayerMarker tes3uiElement?
 ---@field multiMap tes3uiElement?
 ---@field multiPanel tes3uiElement?
 ---@field multiPane tes3uiElement?
@@ -275,6 +277,10 @@ function this.initMapMenuInfo(menu)
     if not menuData.worldMap then return end
     menuData.worldPane = menuData.worldMap:findChild("MenuMap_world_pane")
     if not menuData.worldPane then return end
+    menuData.worldMarkerPane = menuData.worldPane:findChild("null")
+    if not menuData.worldMarkerPane then return end
+    menuData.worldPlayerMarker = menuData.worldMap:findChild("MenuMap_world_player")
+    if not menuData.worldPlayerMarker then return end
 
     if menu.visible then
         if menuData.localMap.visible then
@@ -1544,7 +1550,7 @@ function this.createLocalMarkers()
                     addLocalMarkerPosData(position, markerContainer)
 
                     if data.insertBefore then
-                        localPane:reorderChildren(1, marker, -1)
+                        marker:reorder{ after = playerMarker }
                     end
 
                     log("marker icon has been created, id", id, "parent id", markerId)
@@ -1831,8 +1837,8 @@ function this.createWorldMarkers()
     lastActiveMenu = this.activeMenu
     if table.size(this.waitingToCreate_world) == 0 then return end
 
-    local worldPane = this.menu.worldPane
-    if not worldPane then return end
+    local markerPane = this.menu.worldMarkerPane
+    if not markerPane then return end
 
     for markerId, data in pairs(this.waitingToCreate_world) do
         local record = this.records[data.recordId]
@@ -1859,7 +1865,7 @@ function this.createWorldMarkers()
         else
             local x, y = this.convertObjectPosToWorldMapPaneCoordinates(pos)
 
-            local marker = drawMarker(worldPane, x, y, record, nil, this.currentWorldZoom / 2, true)
+            local marker = drawMarker(markerPane, x, y, record, nil, this.currentWorldZoom / 2, true)
             if marker then
                 this.activeWorldMarkers[data.id] = {
                     id = data.id,
@@ -1878,7 +1884,7 @@ function this.createWorldMarkers()
                 addWorldMarkerPosData(pos, markerContainer)
 
                 if data.insertBefore then
-                    worldPane:reorderChildren(1, marker, -1)
+                    markerPane:reorderChildren(1, marker, -1)
                 end
 
                 this.shouldUpdateWorld = true
