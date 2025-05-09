@@ -1550,7 +1550,7 @@ function this.createLocalMarkers()
                     addLocalMarkerPosData(position, markerContainer)
 
                     if data.insertBefore then
-                        marker:reorder{ after = playerMarker }
+                        localPane:reorderChildren(1, marker, -1)
                     end
 
                     log("marker icon has been created, id", id, "parent id", markerId)
