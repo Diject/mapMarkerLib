@@ -741,6 +741,11 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
 
 
     local function onClickCallbacks(element, clickCount)
+        if clickCount == nil then
+            clickCount = 1
+        elseif clickCount == 1 then -- preventing multiple callbacks
+            return
+        end
         ---@type markerLib.markerContainer
         local luaData = element:getLuaData("data")
         if not luaData then return end
@@ -810,6 +815,8 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
         end
 
         clickCount = clickCount + 1
+        onClickCallbacks(e.source)
+
         if onClickTimer then
             onClickTimer:reset()
         else
