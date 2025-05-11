@@ -742,7 +742,7 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
     image.consumeMouseEvents = true
 
 
-    local function onClickCallbacks(element, clickCount, lockMultiple)
+    local function onClickCallbacks(element, clickCount, lockTimerEvent)
         ---@type markerLib.markerContainer
         local luaData = element:getLuaData("data")
         if not luaData then return end
@@ -751,10 +751,10 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
         if not recordList then return end
 
         for i, rec in ipairs(recordList) do
-            if rec.onClickCallback and clickCount == 1 and
+            if rec.onClickCallback and clickCount == 1 and lockTimerEvent and
                     rec.onClickCallback{marker = element, record = rec, topRecord = recordList[1], data = element:getLuaData("data"), clickCount = 1} == false then
                 break
-            elseif rec.onDoubleClickCallback and clickCount == 2 then
+            elseif rec.onDoubleClickCallback and clickCount == 2 and lockTimerEvent then
                 local callbackRes = rec.onDoubleClickCallback{
                     marker = element,
                     record = rec,
@@ -763,7 +763,7 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
                     clickCount = 2
                 }
                 if callbackRes == false then break end
-            elseif not lockMultiple and rec.onMultipleClickCallback and clickCount > 1 then
+            elseif rec.onMultipleClickCallback and clickCount > 1 and not lockTimerEvent then
                 local callbackRes = rec.onMultipleClickCallback{
                     marker = element,
                     record = rec,
