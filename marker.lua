@@ -198,7 +198,7 @@ this.worldBounds = worldBounds
 ---@field temporary boolean|nil *Default*: `false`. If true, the record will not be saved to the save file
 ---@field zDifference number|nil difference in z-coordinates between the player and the tracked object to cause the icon to change to above|below one
 ---@field onClickCallback (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
----@field onDoubleClick (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
+---@field onDoubleClickCallback (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
 ---@field onMultipleClickCallback (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
 ---@field userData any should be serializible
 
@@ -587,7 +587,7 @@ function this.addRecord(id, params)
 
     record.onClickCallback = params.onClickCallback
     record.onMultipleClickCallback = params.onMultipleClickCallback
-    record.onDoubleClick = params.onDoubleClick
+    record.onDoubleClickCallback = params.onDoubleClickCallback
 
     record.id = id
 
@@ -754,8 +754,8 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
             if rec.onClickCallback and clickCount == 1 and
                     rec.onClickCallback{marker = element, record = rec, topRecord = recordList[1], data = element:getLuaData("data"), clickCount = 1} == false then
                 break
-            elseif rec.onDoubleClick and clickCount == 2 then
-                local callbackRes = rec.onDoubleClick{
+            elseif rec.onDoubleClickCallback and clickCount == 2 then
+                local callbackRes = rec.onDoubleClickCallback{
                     marker = element,
                     record = rec,
                     topRecord = recordList[1],
