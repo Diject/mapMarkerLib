@@ -9,7 +9,8 @@ local tooltipBlock = "MarkerLib_Tooltip_Block"
 local tooltipName = "MarkerLib_Tooltip_Name"
 local tooltipDescription = "MarkerLib_Tooltip_Description"
 
-local doubleClickTime = 3
+local doubleClickTime = 3 -- only for marker removal
+local clickDelay = 0.5
 
 local mcp_mapExpansion = tes3.hasCodePatchFeature(tes3.codePatchFeature.mapExpansionForTamrielRebuilt)
 local minCellGridX = mcp_mapExpansion and -51 or -28
@@ -157,6 +158,7 @@ this.worldBounds = worldBounds
 ---@field record markerLib.markerRecord
 ---@field marker tes3uiElement
 ---@field data markerLib.markerContainer?
+---@field clickCount integer
 
 ---@class markerLib.markerData
 ---@field recordId string recordId
@@ -196,6 +198,7 @@ this.worldBounds = worldBounds
 ---@field temporary boolean|nil *Default*: `false`. If true, the record will not be saved to the save file
 ---@field zDifference number|nil difference in z-coordinates between the player and the tracked object to cause the icon to change to above|below one
 ---@field onClickCallback (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
+---@field onMultipleClickCallback (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
 ---@field userData any should be serializible
 
 local function getId()
@@ -582,6 +585,7 @@ function this.addRecord(id, params)
     record.userData = params.userData
 
     record.onClickCallback = params.onClickCallback
+    record.onMultipleClickCallback = params.onMultipleClickCallback
 
     record.id = id
 
@@ -735,7 +739,8 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
 
     image.consumeMouseEvents = true
 
-    local function onClickCallbacks(element)
+
+    local function onClickCallbacks(element, clickCount)
         ---@type markerLib.markerContainer
         local luaData = element:getLuaData("data")
         if not luaData then return end
@@ -744,18 +749,30 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
         if not recordList then return end
 
         for i, rec in ipairs(recordList) do
-            if rec.onClickCallback and
-                    rec.onClickCallback{marker = element, record = rec, topRecord = recordList[1], data = element:getLuaData("data")} == false then
-                break;
+            if rec.onClickCallback and clickCount == 1 and
+                    rec.onClickCallback{marker = element, record = rec, topRecord = recordList[1], data = element:getLuaData("data"), clickCount = 1} == false then
+                break
+            elseif rec.onMultipleClickCallback and clickCount > 1 then
+                local callbackRes = rec.onMultipleClickCallback{
+                    marker = element,
+                    record = rec,
+                    topRecord = recordList[1],
+                    data = element:getLuaData("data"),
+                    clickCount = clickCount
+                }
+                if callbackRes == false then break end
             end
         end
     end
 
     local lastClickTime = 0
+    ---@type mwseTimer?
+    local onClickTimer
+    local clickCount = 0
     image:registerAfter(tes3.uiEvent.mouseClick, function (e)
 
-        -- code to remove markers by doubleclick
         if tes3.worldController.inputController:isAltDown() then
+            clickCount = 0
             local time = os.clock()
             local doubleClickDetected = false
             if time - lastClickTime < doubleClickTime then
@@ -765,7 +782,7 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
                 lastClickTime = os.clock()
             end
 
-            if not doubleClickDetected then goto next end
+            if not doubleClickDetected then return end
 
             ---@type markerLib.markerContainer
             local luaData = e.source:getLuaData("data")
@@ -788,10 +805,25 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
                     end
                 end,
             }
+
+            return
         end
 
-        ::next::
-        onClickCallbacks(e.source)
+        clickCount = clickCount + 1
+        if onClickTimer then
+            onClickTimer:reset()
+        else
+            onClickTimer = timer.start({
+                duration = clickDelay,
+                type = timer.real,
+                callback = function(e1)
+                    onClickCallbacks(e.source, clickCount)
+                    clickCount = 0
+                    onClickTimer = nil
+                    e1.timer:cancel()
+                end
+            })
+        end
     end)
 
     image:register(tes3.uiEvent.help, function (e)

@@ -3,7 +3,7 @@ local markers = include("diject.mapMarkerLib.marker")
 
 local this = {}
 
-this.version = 5 -- API version. *nil* for the first version
+this.version = 6 -- API version. *nil* for the first version
 
 this.event = {
     initialized = "mapMarkerLib:initialized",
@@ -183,6 +183,12 @@ end
 ---@param func fun(e: markerLib.markerRecord.onClickCallbackData):boolean?
 function recordOOP:registerOnClick(func)
     self.data.onClickCallback = func
+end
+
+---Registers a callback function that will be called when a marker with the record is clicked multiple times (like double click). Returning false will prevent any lower priority callbacks on the same marker from being called
+---@param func fun(e: markerLib.markerRecord.onClickCallbackData):boolean?
+function recordOOP:registerOnMultipleClick(func)
+    self.data.onMultipleClickCallback = func
 end
 
 ---@return boolean? ret returns true if the record found and removed. Or false if it was removed early
