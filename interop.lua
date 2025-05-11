@@ -185,6 +185,12 @@ function recordOOP:registerOnClick(func)
     self.data.onClickCallback = func
 end
 
+---Registers a callback function that will be called when a marker with the record is clicked two times. Returning false will prevent any lower priority callbacks on the same marker from being called
+---@param func fun(e: markerLib.markerRecord.onClickCallbackData):boolean?
+function recordOOP:registerOnDoubleClick(func)
+    self.data.onDoubleClick = func
+end
+
 ---Registers a callback function that will be called when a marker with the record is clicked multiple times (like double click). Returning false will prevent any lower priority callbacks on the same marker from being called
 ---@param func fun(e: markerLib.markerRecord.onClickCallbackData):boolean?
 function recordOOP:registerOnMultipleClick(func)

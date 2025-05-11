@@ -198,6 +198,7 @@ this.worldBounds = worldBounds
 ---@field temporary boolean|nil *Default*: `false`. If true, the record will not be saved to the save file
 ---@field zDifference number|nil difference in z-coordinates between the player and the tracked object to cause the icon to change to above|below one
 ---@field onClickCallback (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
+---@field onDoubleClick (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
 ---@field onMultipleClickCallback (fun(e: markerLib.markerRecord.onClickCallbackData):boolean?)|nil
 ---@field userData any should be serializible
 
@@ -586,6 +587,7 @@ function this.addRecord(id, params)
 
     record.onClickCallback = params.onClickCallback
     record.onMultipleClickCallback = params.onMultipleClickCallback
+    record.onDoubleClick = params.onDoubleClick
 
     record.id = id
 
@@ -741,11 +743,6 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
 
 
     local function onClickCallbacks(element, clickCount)
-        if clickCount == nil then
-            clickCount = 1
-        elseif clickCount == 1 then -- preventing multiple callbacks
-            return
-        end
         ---@type markerLib.markerContainer
         local luaData = element:getLuaData("data")
         if not luaData then return end
@@ -757,6 +754,15 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
             if rec.onClickCallback and clickCount == 1 and
                     rec.onClickCallback{marker = element, record = rec, topRecord = recordList[1], data = element:getLuaData("data"), clickCount = 1} == false then
                 break
+            elseif rec.onDoubleClick and clickCount == 2 then
+                local callbackRes = rec.onMultipleClickCallback{
+                    marker = element,
+                    record = rec,
+                    topRecord = recordList[1],
+                    data = element:getLuaData("data"),
+                    clickCount = 2
+                }
+                if callbackRes == false then break end
             elseif rec.onMultipleClickCallback and clickCount > 1 then
                 local callbackRes = rec.onMultipleClickCallback{
                     marker = element,
@@ -816,6 +822,9 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
 
         clickCount = clickCount + 1
         onClickCallbacks(e.source)
+        if clickCount == 2 then
+            onClickCallbacks(e.source, 2)
+        end
 
         if onClickTimer then
             onClickTimer:reset()
