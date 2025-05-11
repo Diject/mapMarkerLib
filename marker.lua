@@ -755,7 +755,7 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
                     rec.onClickCallback{marker = element, record = rec, topRecord = recordList[1], data = element:getLuaData("data"), clickCount = 1} == false then
                 break
             elseif rec.onDoubleClick and clickCount == 2 then
-                local callbackRes = rec.onMultipleClickCallback{
+                local callbackRes = rec.onDoubleClick{
                     marker = element,
                     record = rec,
                     topRecord = recordList[1],
