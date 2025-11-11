@@ -241,6 +241,7 @@ end
 ---@field localMapPane tes3uiElement?
 ---@field localPlayerMarker tes3uiElement?
 ---@field worldMap tes3uiElement?
+---@field worldPanel tes3uiElement?
 ---@field worldPane tes3uiElement?
 ---@field worldMarkerPane tes3uiElement?
 ---@field worldPlayerMarker tes3uiElement?
@@ -279,7 +280,9 @@ function this.initMapMenuInfo(menu)
 
     menuData.worldMap = menu:findChild("MenuMap_world")
     if not menuData.worldMap then return end
-    menuData.worldPane = menuData.worldMap:findChild("MenuMap_world_pane")
+    menuData.worldPanel = menuData.worldMap:findChild("MenuMap_world_panel")
+    if not menuData.worldPanel then return end
+    menuData.worldPane = menuData.worldPanel:findChild("MenuMap_world_pane")
     if not menuData.worldPane then return end
     menuData.worldMarkerPane = menuData.worldPane:findChild("null")
     if not menuData.worldMarkerPane then return end
@@ -679,12 +682,13 @@ local function calcNegativeScaleValue(scale, imageHeight)
 end
 
 ---@param pane tes3uiElement
+---@param parentPanel tes3uiElement
 ---@param record markerLib.markerRecord
 ---@param position {z : number}|tes3vector3|nil position of the tracked object
 ---@param textureScale number?
 ---@param isWorld boolean?
 ---@return tes3uiElement|nil
-local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
+local function drawMarker(pane, parentPanel, x, y, record, position, textureScale, isWorld)
     if not pane or not record then return end
     if not textureScale then textureScale = 1 end
 
@@ -780,7 +784,7 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
     ---@type mwseTimer?
     local onClickTimer
     local clickCount = 0
-    image:registerAfter(tes3.uiEvent.mouseClick, function (e)
+    local function mouseClick(e)
 
         if tes3.worldController.inputController:isAltDown() then
             clickCount = 0
@@ -840,7 +844,54 @@ local function drawMarker(pane, x, y, record, position, textureScale, isWorld)
                 end
             })
         end
+    end
+
+
+    -- drag logic
+    local mouseDownOffsetX = 0
+    local mouseDownOffsetY = 0
+    local mousePosX = 0
+    local mousePosY = 0
+    local doDrag = false
+    local distance = 0
+
+    -- mouseRelease somehow only works outside the element. Therefore using mouseClick
+    image:register(tes3.uiEvent.mouseClick, function (e)
+        if distance < 25 then
+            mouseClick(e)
+        end
+        doDrag = false
     end)
+
+    if parentPanel then
+        image:register(tes3.uiEvent.mouseDown, function (e)
+            mouseDownOffsetX = parentPanel.childOffsetX
+            mouseDownOffsetY = parentPanel.childOffsetY
+            mousePosX = e.data0
+            mousePosY = e.data1
+            distance = 0
+            doDrag = true
+        end)
+
+        image:register(tes3.uiEvent.mouseStillPressed, function (e)
+            if not doDrag then return end
+
+            local mouseX = mousePosX - e.data0
+            local mouseY = mousePosY - e.data1
+
+            mousePosX = e.data0
+            mousePosY = e.data1
+
+            distance = distance + math.abs(mouseX) + math.abs(mouseY)
+
+            mouseDownOffsetX = mouseDownOffsetX - mouseX
+            mouseDownOffsetY = mouseDownOffsetY - mouseY
+            parentPanel.childOffsetX = mouseDownOffsetX
+            parentPanel.childOffsetY = mouseDownOffsetY
+            this.menu.menuMap:updateLayout()
+        end)
+    end
+
 
     image:register(tes3.uiEvent.help, function (e)
         if not e.source then return end
@@ -1503,7 +1554,7 @@ function this.createLocalMarkers()
                     posX, posY = calcExteriorPos(position)
                 end
 
-                local marker = drawMarker(localPane, posX, posY, record, position)
+                local marker = drawMarker(localPane, localPanel, posX, posY, record, position)
                 if marker then
                     local pos = ref.position:copy()
                     this.activeLocalMarkers[ref] = {
@@ -1571,7 +1622,7 @@ function this.createLocalMarkers()
                     posX, posY = calcExteriorPos(position)
                 end
 
-                local marker = drawMarker(localPane, posX, posY, record, position)
+                local marker = drawMarker(localPane, localPanel, posX, posY, record, position)
                 if marker then
                     local id = getId()
 
@@ -1885,8 +1936,9 @@ function this.createWorldMarkers()
     lastActiveMenu = this.activeMenu
     if table.size(this.waitingToCreate_world) == 0 then return end
 
+    local markerPanel = this.menu.worldPanel
     local markerPane = this.menu.worldMarkerPane
-    if not markerPane then return end
+    if not markerPanel or not markerPane then return end
 
     for markerId, data in pairs(this.waitingToCreate_world) do
         local record = this.records[data.recordId]
@@ -1913,7 +1965,7 @@ function this.createWorldMarkers()
         else
             local x, y = this.convertObjectPosToWorldMapPaneCoordinates(pos)
 
-            local marker = drawMarker(markerPane, x, y, record, nil, this.currentWorldZoom / 2, true)
+            local marker = drawMarker(markerPane, markerPanel, x, y, record, nil, this.currentWorldZoom / 2, true)
             if marker then
                 this.activeWorldMarkers[data.id] = {
                     id = data.id,
