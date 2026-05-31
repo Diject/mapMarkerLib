@@ -56,6 +56,7 @@ local function menuMultiActivated(e)
 
     menu:getTopLevelMenu():registerAfter(tes3.uiEvent.update, function (e1)
         if not markerLib.isMultiMenuInitialized then return end
+        if markerLib.isMapMenuInitialized and markerLib.menu.menuMap.visible then return end
 
         if markerLib.menu.multiMap.visible and os.clock() - markerLib.lastUpdate > markerLib.minDelayBetweenUpdates then
             markerLib.activeMenu = "MenuMulti"
