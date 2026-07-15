@@ -911,22 +911,11 @@ local function drawMarker(pane, parentPanel, x, y, record, position, textureScal
         -- used to group descriptions
         local lastDescrHash
 
-        local blockCount = 0
+        local descriptionBlocks = {}
         for i, rec in ipairs(recordList) do
             if not rec.name and not rec.description then goto continue end
             if rec.hide then goto continue end
-
             pcall(event.trigger, "mapMarkerLib:tooltipPreRecordRegistered", {record = rec, element = tooltip}, { filter = rec.id })
-
-            local block = tooltip:createBlock{id = tooltipBlock}
-            block.flowDirection = tes3.flowDirection.topToBottom
-            block.autoHeight = true
-            block.autoWidth = true
-            block.maxWidth = 400
-            block.borderBottom = 3
-            block.childAlignX = 0.5
-
-            block:setLuaData("record", rec)
 
             local function replaceTags(str)
                 if luaData.ref and luaData.ref:valid() then
@@ -943,27 +932,7 @@ local function drawMarker(pane, parentPanel, x, y, record, position, textureScal
                 return str
             end
 
-            local hasLabels = false
-
-            if rec.name and rec.name ~= "" then
-                local str = rec.name
-                str = replaceTags(str)
-                local label = block:createLabel{id = tooltipName, text = str}
-                label.color = rec.nameColor or rec.color or label.color
-                label.autoHeight = true
-                label.autoWidth = true
-                label.maxWidth = 350
-                label.wrapText = true
-                label.justifyText = tes3.justifyText.left
-
-                if lastName == str then
-                    label.visible = false
-                else
-                    lastName = str
-                    hasLabels = true
-                    lastDescrHash = nil
-                end
-            end
+            local id
 
             if rec.description then
                 local descriptions
@@ -974,42 +943,88 @@ local function drawMarker(pane, parentPanel, x, y, record, position, textureScal
                     descriptions = rec.description
                 end
 
+                local color = rec.descriptionColor or rec.color or tes3ui.getPalette(tes3.palette.normalColor)
+                local strArr = {}
+                local lastDescr
                 for _, descr in ipairs(descriptions) do
-                    local str = descr
-                    str = replaceTags(str)
-                    if str ~= "" then
-                        local label = block:createLabel{id = tooltipDescription, text = str}
-
-                        local color = rec.descriptionColor or rec.color or label.color
-                        label.color = color
-
-                        label.autoHeight = true
-                        label.autoWidth = true
-                        label.maxWidth = 400
-                        label.wrapText = true
-                        label.justifyText = tes3.justifyText.left
-
-                        local descrHash = string.format("%s,%s,%s,%s", str, tostring(color[1]), tostring(color[2]), tostring(color[3]))
-                        if descrHash == lastDescrHash then
-                            label.visible = false
-                        else
-                            lastDescrHash = descrHash
-                            hasLabels = true
+                    local s = replaceTags(descr)
+                    if s ~= "" then
+                        if s ~= lastDescr then
+                            table.insert(strArr, s)
                         end
+                        lastDescr = s
                     end
+                end
+
+                if next(strArr) then
+                    local str = table.concat(strArr, "\n")
+                    id = string.format("%s,%s,%s,%s", str, tostring(color[1]), tostring(color[2]), tostring(color[3]))
+                    descriptionBlocks[id] = descriptionBlocks[id] or {names = {}, color = color, descr = str, i = i}
                 end
             end
 
-            if hasLabels then
-                blockCount = blockCount + 1
-            else
-                block.visible = false
+            id = id or rec.name
+            if not id then goto continue end
+
+            if rec.name then
+                local color = rec.nameColor or rec.color or tes3ui.getPalette(tes3.palette.normalColor)
+                descriptionBlocks[id] = descriptionBlocks[id] or {names = {}, i = i}
+                local name = replaceTags(rec.name)
+                for _, dt in pairs(descriptionBlocks[id].names) do
+                    if dt[1] == name and dt[2][1] == color[1] and dt[2][2] == color[2] and dt[2][3] == color[3] then
+                        goto continue
+                    end
+                end
+
+                table.insert(descriptionBlocks[id].names, {name, color})
             end
 
             ::continue::
         end
 
-        if blockCount == 0 then
+        descriptionBlocks = table.values(descriptionBlocks, function (a, b)
+            return a.i < b.i
+        end)
+
+        local hasText = false
+
+        for i, dt in ipairs(descriptionBlocks) do
+            if not dt.descr and not next(dt.names) then goto continue end
+
+            hasText = true
+
+            local block = tooltip:createBlock{id = tooltipBlock}
+            block.flowDirection = tes3.flowDirection.topToBottom
+            block.autoHeight = true
+            block.autoWidth = true
+            block.maxWidth = 400
+            block.borderBottom = 3
+            block.childAlignX = 0.5
+
+            for _, nmDt in pairs(dt.names) do
+                local label = block:createLabel{id = tooltipName, text = nmDt[1]}
+                label.color = nmDt[2]
+                label.autoHeight = true
+                label.autoWidth = true
+                label.maxWidth = 350
+                label.wrapText = true
+                label.justifyText = tes3.justifyText.left
+            end
+
+            if dt.descr then
+                local label = block:createLabel{id = tooltipDescription, text = dt.descr}
+                label.color = dt.color
+                label.autoHeight = true
+                label.autoWidth = true
+                label.maxWidth = 400
+                label.wrapText = true
+                label.justifyText = tes3.justifyText.left
+            end
+
+            ::continue::
+        end
+
+        if not hasText then
             tooltip:destroy()
         else
             pcall(event.trigger, "mapMarkerLib:tooltipCreated", {element = tooltip, records = recordList}, {})
