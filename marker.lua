@@ -741,7 +741,8 @@ local function drawMarker(pane, parentPanel, x, y, record, position, textureScal
     image.color = record.color or {1, 1, 1}
     image.alpha = record.alpha or 1
 
-    image:setLuaData("imageRecordId", record)
+    image:setLuaData("imageRecord", record)
+    image:setLuaData("imageRecordId", record.id)
 
     image.consumeMouseEvents = true
 
@@ -1099,6 +1100,7 @@ local function changeMarker(markerEl, x, y, updateImage, textureScale, isWorld)
         markerEl.contentPath = path
 
         markerEl:setLuaData("imageRecordId", rec.id)
+        markerEl:setLuaData("imageRecord", rec)
 
         local scale = rec.scale or 1
         if scale < 0 then
@@ -1249,7 +1251,11 @@ function this.addLocalMarkerFromMarkerData(data)
 end
 
 -- Thank you, chatgpt
-local function calculateOffscreenIndicator(targetX, targetY, screenWidth, screenHeight, screenOriginX, screenOriginY, border)
+local function calculateOffscreenIndicator(targetX, targetY, screenWidth, screenHeight, screenOriginX, screenOriginY, border, xOffset, yOffset, width, height)
+    xOffset = xOffset or 0
+    yOffset = yOffset or 0
+    width = width or 0
+    height = height or 0
     local screenCenterX = screenOriginX + screenWidth / 2
     local screenCenterY = screenOriginY - screenHeight / 2
 
@@ -1260,10 +1266,10 @@ local function calculateOffscreenIndicator(targetX, targetY, screenWidth, screen
     local normX = dirX / magnitude
     local normY = dirY / magnitude
 
-    local left = screenOriginX + border
-    local right = screenOriginX + screenWidth - border
-    local top = screenOriginY - border
-    local bottom = screenOriginY - screenHeight + border
+    local left = screenOriginX + border - xOffset
+    local right = screenOriginX + screenWidth - border - xOffset - width
+    local top = screenOriginY - border - yOffset
+    local bottom = screenOriginY - screenHeight + border - yOffset + height
 
     local indicatorX, indicatorY
 
@@ -1908,8 +1914,30 @@ function this.updateLocalMarkers(force)
         end
 
         if data.containerData.offscreen and (posX < panelFrameX1 or posX > panelFrameX2 or posY > panelFrameY1 or posY < panelFrameY2) then
-            local border = this.activeMenu == "MenuMulti" and 4 or 6
-            local nx, ny = calculateOffscreenIndicator(posX, posY, localPanel.width, localPanel.height, -layoutOffsetX, -layoutOffsetY, border)
+            local border = this.activeMenu == "MenuMulti" and -4 or 0
+
+            local rec = marker:getLuaData("imageRecord")
+            local xOffset, yOffset, width, height = 0, 0, 0, 0
+
+            if rec then
+                local scale = rec.scale or 1
+                if scale < 0 then
+                    scale = calcNegativeScaleValue(scale, rec.height)
+                end
+                if rec.scale < 0 then
+                    xOffset = (rec.textureShiftX or rec.width / 2) * scale
+                    yOffset = (rec.textureShiftY or rec.height / 2) * scale
+                else
+                    xOffset = (rec.textureShiftX or -rec.width / 2)
+                    yOffset = (rec.textureShiftY or rec.height / 2)
+                end
+                width = (rec.width or 0) * scale
+                height = (rec.height or 0) * scale
+            end
+
+            local nx, ny = calculateOffscreenIndicator(posX, posY, localPanel.width, localPanel.height, -layoutOffsetX, -layoutOffsetY, border,
+                xOffset, yOffset, width, height)
+
             posX = nx or posX
             posY = ny or posY
         end
