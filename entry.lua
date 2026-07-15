@@ -19,7 +19,7 @@ local function menuMapActivated(e)
     local menu = e.element
     markerLib.initMapMenuInfo(menu)
 
-    menu:getTopLevelMenu():registerAfter(tes3.uiEvent.update, function (e1)
+    menu:getTopLevelMenu():registerBefore(tes3.uiEvent.update, function (e1)
         if not markerLib.isMapMenuInitialized then return end
 
         if markerLib.menu.localMap.visible then
@@ -54,7 +54,7 @@ local function menuMultiActivated(e)
     local menu = e.element
     markerLib.initMultiMenuInfo(menu)
 
-    menu:getTopLevelMenu():registerAfter(tes3.uiEvent.update, function (e1)
+    menu:getTopLevelMenu():registerBefore(tes3.uiEvent.update, function (e1)
         if not markerLib.isMultiMenuInitialized then return end
         if markerLib.isMapMenuInitialized and markerLib.menu.menuMap.visible then return end
 
